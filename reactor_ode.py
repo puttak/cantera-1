@@ -11,8 +11,15 @@ methods as the Sundials CVODES solver used by Cantera.
 """
 
 import cantera as ct
+
+print("Running Cantera version: {}".format(ct.__version__))
+
 import numpy as np
+import pandas as pd
 import scipy.integrate
+
+import matplotlib.pyplot as plt
+
 
 class ReactorOde(object):
     def __init__(self, gas):
@@ -44,6 +51,14 @@ P = ct.one_atm
 gas.TPX = 1001, P, 'H2:2,O2:1,N2:4'
 y0 = np.hstack((gas.T, gas.Y))
 
+# now compile a list of all variables for which we will store data
+#columnNames = [gas.component_name(item) for item in range(gas.n_vars)]
+columnNames = gas.species_names
+columnNames = columnNames+['temperature']+['pressure']
+
+# use the above list to create a DataFrame
+timeHistory = pd.DataFrame(columns=columnNames)
+
 # Set up objects representing the ODE and the solver
 ode = ReactorOde(gas)
 solver = scipy.integrate.ode(ode)
@@ -58,17 +73,26 @@ while solver.successful() and solver.t < t_end:
     solver.integrate(solver.t + dt)
     gas.TPY = solver.y[0], P, solver.y[1:]
     states.append(gas.state, t=solver.t)
+    # Extract the state of the reactor
+    state = np.hstack([gas[gas.species_names].Y, gas.T, gas.P])
+    # Update the dataframe
+    timeHistory.loc[solver.t] = state  # Plot the results
 
-# Plot the results
-try:
-    import matplotlib.pyplot as plt
-    L1 = plt.plot(states.t, states.T, color='r', label='T', lw=2)
-    plt.xlabel('time (s)')
-    plt.ylabel('Temperature (K)')
-    plt.twinx()
-    L2 = plt.plot(states.t, states('OH').Y, label='OH', lw=2)
-    plt.ylabel('Mass Fraction')
-    plt.legend(L1+L2, [line.get_label() for line in L1+L2], loc='lower right')
-    plt.show()
-except ImportError:
-    print('Matplotlib not found. Unable to plot results.')
+
+
+
+
+L1 = plt.plot(states.t, states.T, color='r', label='T', lw=2)
+plt.xlabel('time (s)')
+plt.ylabel('Temperature (K)')
+plt.twinx()
+L2 = plt.plot(states.t, states('OH').Y, label='OH', lw=2)
+plt.ylabel('Mass Fraction')
+plt.legend(L1 + L2, [line.get_label() for line in L1 + L2], loc='lower right')
+
+
+plt.figure()
+plt.semilogx(timeHistory.index, timeHistory['temperature'],'-o')
+
+plt.show()
+
