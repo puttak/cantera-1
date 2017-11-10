@@ -52,12 +52,12 @@ gas.TPX = 1001, P, 'H2:2,O2:1,N2:4'
 y0 = np.hstack((gas.T, gas.Y))
 
 # now compile a list of all variables for which we will store data
-#columnNames = [gas.component_name(item) for item in range(gas.n_vars)]
 columnNames = gas.species_names
-columnNames = columnNames+['temperature']+['pressure']
+columnNames = columnNames+['temperature']
 
 # use the above list to create a DataFrame
 timeHistory = pd.DataFrame(columns=columnNames)
+train_input = pd.DataFrame(columns=columnNames)
 
 # Set up objects representing the ODE and the solver
 ode = ReactorOde(gas)
@@ -70,13 +70,15 @@ t_end = 1e-3
 states = ct.SolutionArray(gas, 1, extra={'t': [0.0]})
 dt = 1e-5
 while solver.successful() and solver.t < t_end:
+    state_old = np.hstack([gas[gas.species_names].Y, gas.T])
     solver.integrate(solver.t + dt)
     gas.TPY = solver.y[0], P, solver.y[1:]
     states.append(gas.state, t=solver.t)
     # Extract the state of the reactor
-    state = np.hstack([gas[gas.species_names].Y, gas.T, gas.P])
+    state_new = np.hstack([gas[gas.species_names].Y, gas.T])
     # Update the dataframe
-    timeHistory.loc[solver.t] = state  # Plot the results
+    timeHistory.loc[solver.t] = state_new
+    train_input.loc[solver.t] = state_old
 
 
 
@@ -92,7 +94,7 @@ plt.legend(L1 + L2, [line.get_label() for line in L1 + L2], loc='lower right')
 
 
 plt.figure()
-plt.semilogx(timeHistory.index, timeHistory['temperature'],'-o')
+plt.semilogx(timeHistory.index, timeHistory['H2'],'-o')
 
 plt.show()
 
