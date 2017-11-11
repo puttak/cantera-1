@@ -43,8 +43,8 @@ class ReactorOde(object):
 
         return np.hstack((dTdt, dYdt))
 
-
 gas = ct.Solution('gri30.xml')
+
 
 # Initial condition
 P = ct.one_atm
@@ -66,7 +66,7 @@ solver.set_integrator('vode', method='bdf', with_jacobian=True)
 solver.set_initial_value(y0, 0.0)
 
 # Integrate the equations, keeping T(t) and Y(k,t)
-t_end = 1e-3
+t_end = 8e-4
 states = ct.SolutionArray(gas, 1, extra={'t': [0.0]})
 dt = 1e-5
 while solver.successful() and solver.t < t_end:
@@ -83,18 +83,18 @@ while solver.successful() and solver.t < t_end:
 
 
 
+if __name__ == "__main__":
+    L1 = plt.plot(states.t, states.T, color='r', label='T', lw=2)
+    plt.xlabel('time (s)')
+    plt.ylabel('Temperature (K)')
+    plt.twinx()
+    L2 = plt.plot(states.t, states('OH').Y, label='OH', lw=2)
+    plt.ylabel('Mass Fraction')
+    plt.legend(L1 + L2, [line.get_label() for line in L1 + L2], loc='lower right')
 
-L1 = plt.plot(states.t, states.T, color='r', label='T', lw=2)
-plt.xlabel('time (s)')
-plt.ylabel('Temperature (K)')
-plt.twinx()
-L2 = plt.plot(states.t, states('OH').Y, label='OH', lw=2)
-plt.ylabel('Mass Fraction')
-plt.legend(L1 + L2, [line.get_label() for line in L1 + L2], loc='lower right')
 
+    plt.figure()
+    plt.semilogx(timeHistory.index, timeHistory['H2'],'-o')
 
-plt.figure()
-plt.semilogx(timeHistory.index, timeHistory['H2'],'-o')
-
-plt.show()
+    plt.show()
 

@@ -1,5 +1,3 @@
-import os
-
 import numpy as np
 import pandas as pd
 
@@ -25,13 +23,14 @@ def res_block(input_tensor, n_neuron, stage, block, bn=False):
     if bn:
         x = BatchNormalization(axis=-1, name=bn_name_base + '2a')(x)
     x = Activation('relu')(x)
+    x = Dropout(0.5)(x)
 
     x = Dense(n_neuron, name=conv_name_base + '2b')(x)
     if bn:
         x = BatchNormalization(axis=-1, name=bn_name_base + '2b')(x)
     x = layers.add([x, input_tensor])
     x = Activation('relu')(x)
-
+    x = Dropout(0.)(x)
     return x
 
 # prepare data
@@ -47,7 +46,10 @@ label_scalers = {}
 for itm in output:
     print(itm)
     scaler = preprocessing.MinMaxScaler()
-    out = scaler.fit_transform(train_input[itm].values.reshape(-1, 1))
+    scaler.fit(np.concatenate([train_input[itm], timeHistory[itm]], axis=0).reshape(-1, 1))
+    out = scaler.transform(train_input[itm].values.reshape(-1, 1))
+
+
     label_scalers[itm] = scaler
     label_values.append(out)
 
@@ -74,8 +76,8 @@ print('set up ANN')
 dim_input = x_train.shape[1]
 dim_label = y_train.shape[1]
 n_neuron = 100
-batch_size = 1024
-epochs = 4000
+batch_size = 512
+epochs = 1500
 vsplit = 0.1
 batch_norm = False
 
@@ -89,13 +91,14 @@ x = Dense(n_neuron, activation='relu')(inputs)
 x = res_block(x, n_neuron, stage=1, block='a', bn=batch_norm)
 x = res_block(x, n_neuron, stage=1, block='b', bn=batch_norm)
 
-# x = res_block(x, n_neuron, stage=1, block='c', bn=batch_norm)
-# x = res_block(x, n_neuron, stage=1, block='d', bn=batch_norm)
+
+#x = res_block(x, n_neuron, stage=1, block='c', bn=batch_norm)
+#x = res_block(x, n_neuron, stage=1, block='d', bn=batch_norm)
 
 predictions = Dense(dim_label, activation='linear')(x)
 
 model = Model(inputs=inputs, outputs=predictions)
-model.compile(loss='mse', optimizer='adam', metrics=['accuracy'])
+model.compile(loss='mae', optimizer='adam', metrics=['accuracy'])
 
 # checkpoint (save the best model based validate loss)
 filepath = "./tmp/weights.best.cntk.hdf5"
@@ -122,7 +125,7 @@ fig = plt.figure()
 plt.semilogy(history.history['loss'])
 if vsplit:
     plt.semilogy(history.history['val_loss'])
-plt.title('mse')
+plt.title('mae')
 plt.ylabel('loss')
 plt.xlabel('epoch')
 plt.legend(['train', 'test'], loc='upper right')
