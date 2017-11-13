@@ -54,10 +54,12 @@ y0 = np.hstack((gas.T, gas.Y))
 # now compile a list of all variables for which we will store data
 columnNames = gas.species_names
 columnNames = columnNames+['temperature']
+# columnNames = columnNames+['pressure']
 
 # use the above list to create a DataFrame
-timeHistory = pd.DataFrame(columns=columnNames)
-train_input = pd.DataFrame(columns=columnNames)
+train_new = pd.DataFrame(columns=columnNames)
+train_org = pd.DataFrame(columns=columnNames)
+train_res = pd.DataFrame(columns=columnNames)
 
 # Set up objects representing the ODE and the solver
 ode = ReactorOde(gas)
@@ -66,22 +68,27 @@ solver.set_integrator('vode', method='bdf', with_jacobian=True)
 solver.set_initial_value(y0, 0.0)
 
 # Integrate the equations, keeping T(t) and Y(k,t)
-t_end = 8e-4
+t_end = 1e-3
 states = ct.SolutionArray(gas, 1, extra={'t': [0.0]})
-dt = 1e-5
+dt = 1e-6
 while solver.successful() and solver.t < t_end:
     state_old = np.hstack([gas[gas.species_names].Y, gas.T])
+    #state_old = np.hstack([gas[gas.species_names].Y])
     solver.integrate(solver.t + dt)
     gas.TPY = solver.y[0], P, solver.y[1:]
     states.append(gas.state, t=solver.t)
     # Extract the state of the reactor
     state_new = np.hstack([gas[gas.species_names].Y, gas.T])
+    #state_new = np.hstack([gas[gas.species_names].Y])
+    state_res = state_new - state_old
     # Update the dataframe
-    timeHistory.loc[solver.t] = state_new
-    train_input.loc[solver.t] = state_old
+    train_new.loc[solver.t] = state_new
+    train_org.loc[solver.t] = state_old
+    train_res.loc[solver.t] = state_res
 
-
-
+train_org = train_org.loc[:, (train_org != 0).any(axis=0)]
+train_new = train_new.loc[:, (train_new != 0).any(axis=0)]
+train_res = train_res.loc[:, (train_res != 0).any(axis=0)]
 
 if __name__ == "__main__":
     L1 = plt.plot(states.t, states.T, color='r', label='T', lw=2)
@@ -94,7 +101,7 @@ if __name__ == "__main__":
 
 
     plt.figure()
-    plt.semilogx(timeHistory.index, timeHistory['H2'],'-o')
+    plt.semilogx(train_new.index, train_new['H2'], '-o')
 
     plt.show()
 
