@@ -75,7 +75,7 @@ dt = 1e-6
 i = 0
 input_val = []
 target_val = []
-ini_T =np.linspace(1001,1201,5)
+ini_T =np.linspace(1001,1501,10)
 for temp in ini_T:
     gas.TPX = temp, P, 'H2:2,O2:1,N2:4'
     y0 = np.hstack((gas.T, gas.Y))

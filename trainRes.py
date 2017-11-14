@@ -83,7 +83,7 @@ print('set up ANN')
 dim_input = x_train.shape[1]
 dim_label = y_train.shape[1]
 n_neuron = 100
-batch_size = 128
+batch_size = 512
 epochs = 500
 vsplit = 0.1
 batch_norm = True
