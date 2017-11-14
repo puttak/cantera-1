@@ -54,14 +54,13 @@ P = ct.one_atm
 
 # now compile a list of all variables for which we will store data
 columnNames = gas.species_names
-columnNames = columnNames+['temperature']
+columnNames = columnNames + ['temperature']
 # columnNames = columnNames+['pressure']
 
 # use the above list to create a DataFrame
 train_new = pd.DataFrame(columns=columnNames)
 train_org = pd.DataFrame(columns=columnNames)
 train_res = pd.DataFrame(columns=columnNames)
-
 
 # Set up objects representing the ODE and the solver
 # ode = ReactorOde(gas)
@@ -76,7 +75,7 @@ dt = 1e-6
 i = 0
 input_val = []
 target_val = []
-ini_T =np.linspace(1001,3001,40)
+ini_T = np.linspace(1001, 3001, 200)
 for temp in ini_T:
     gas.TPX = temp, P, 'H2:2,O2:1,N2:4'
     y0 = np.hstack((gas.T, gas.Y))
@@ -103,6 +102,8 @@ for temp in ini_T:
         i = i + 1
         input_val.append(state_old)
         target_val.append(state_new)
+        if (abs(state_res.max()) < 1e-5 and solver.t > 0.0001):
+            break
 
 train_org = train_org.loc[:, (train_org != 0).any(axis=0)]
 train_new = train_new.loc[:, (train_new != 0).any(axis=0)]

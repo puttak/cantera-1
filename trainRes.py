@@ -168,7 +168,10 @@ df_error_inv = abs(pd.DataFrame(data=error_inv, columns=output))
 
 def acc_plt(sp):
     plt.figure()
-    plt.plot(train_new[sp],df_y_prdt_inv[sp],'kd',ms=2)
+    plt.plot(train_new[sp],df_y_prdt_inv[sp],'kd',ms=1)
+    plt.axis('tight')
+    plt.axes().set_aspect('equal')
+    #plt.axis([train_new[sp].min(), train_new[sp].max(), train_new[sp].min(), train_new[sp].max()], 'tight')
     plt.title(sp)
 
 acc_plt('H2O2')

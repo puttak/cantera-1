@@ -45,7 +45,7 @@ class ReactorOde(object):
 
 
 # gas = ct.Solution('gri30.xml')
-gas = ct.Solution('Boivin_newTherm.cti')
+gas = ct.Solution('./data/Boivin_newTherm.cti')
 
 # Initial condition
 P = ct.one_atm
@@ -75,7 +75,7 @@ dt = 1e-6
 i = 0
 input_val = []
 target_val = []
-ini_T =np.linspace(1001,1501,10)
+ini_T =np.linspace(1301,1501,1)
 for temp in ini_T:
     gas.TPX = temp, P, 'H2:2,O2:1,N2:4'
     y0 = np.hstack((gas.T, gas.Y))
@@ -93,15 +93,21 @@ for temp in ini_T:
         state_new = np.hstack([gas[gas.species_names].Y, gas.T])
         # state_new = np.hstack([gas[gas.species_names].Y])
         state_res = state_new - state_old
+        #if(abs(state_res.max())<1e5):
+#            break
+        print(abs(state_res).max())
         # Update the dataframe
         # train_new.loc[solver.t] = state_new
         # train_org.loc[solver.t] = state_old
         # train_res.loc[solver.t] = state_res
         train_new.loc[i] = state_new
         train_org.loc[i] = state_old
+        train_res.loc[i] = state_res
         i = i + 1
         input_val.append(state_old)
         target_val.append(state_new)
+        if(abs(state_res.max())<1e-5 and solver.t >0.0001):
+            break
 
 train_org = train_org.loc[:, (train_org != 0).any(axis=0)]
 train_new = train_new.loc[:, (train_new != 0).any(axis=0)]
