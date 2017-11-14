@@ -1,5 +1,5 @@
 
-from keras.layers import Dense, Activation, Input, BatchNormalization, Dropout
+from keras.layers import Dense, Activation, BatchNormalization, Dropout
 from keras import layers
 from keras import backend as K
 K.set_floatx('float32')
