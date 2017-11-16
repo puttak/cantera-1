@@ -10,7 +10,7 @@ os.environ['KERAS_BACKEND'] = 'tensorflow'
 from keras import backend as K
 
 K.set_floatx('float32')
-print(K.floatx())
+print("precision: " + K.floatx())
 
 from keras.models import Model
 from keras.layers import Dense, Input, BatchNormalization, Activation, Dropout
@@ -20,10 +20,16 @@ from res_block import res_block
 
 import cntk
 
-from reactor_ode import train_org, train_new, train_res
 from sklearn.utils import shuffle
+from reactor_ode_p import data_gen
 
 # prepare data
+ini_T = np.linspace(1001, 3001, 20)
+ini = []
+for i in np.linspace(2.5, 0., 20):
+    ini = ini + [(temp, i) for temp in ini_T]
+train_org, train_new = data_gen(ini)
+
 # train_org = train_org[0.000:0.001]
 # train_new = train_new[0.000:0.001]
 train_org, train_new = shuffle(train_org, train_new)
@@ -85,7 +91,7 @@ dim_input = x_train.shape[1]
 dim_label = y_train.shape[1]
 n_neuron = 100
 batch_size = 512
-epochs = 500
+epochs = 100
 vsplit = 0.1
 batch_norm = True
 
@@ -140,7 +146,6 @@ plt.ylabel('loss')
 plt.xlabel('epoch')
 plt.legend(['train', 'test'], loc='upper right')
 
-
 #########################################
 model.load_weights("./tmp/weights.best.cntk.hdf5")
 
@@ -162,19 +167,57 @@ y_prdt_inv = np.concatenate(
 )
 df_y_prdt_inv = pd.DataFrame(data=y_prdt_inv, columns=output)
 
-error_inv = (y_prdt_inv - train_new) / (train_new+1e-10)
+error_inv = (y_prdt_inv - train_new) / (train_new + 1e-10)
 df_error_inv = abs(pd.DataFrame(data=error_inv, columns=output))
 
 
 def acc_plt(sp):
     plt.figure()
-    plt.plot(train_new[sp],df_y_prdt_inv[sp],'kd',ms=1)
+    plt.plot(train_new[sp], df_y_prdt_inv[sp], 'kd', ms=1)
     plt.axis('tight')
-    plt.axes().set_aspect('equal')
-    #plt.axis([train_new[sp].min(), train_new[sp].max(), train_new[sp].min(), train_new[sp].max()], 'tight')
+    plt.axis('equal')
+    # plt.axis([train_new[sp].min(), train_new[sp].max(), train_new[sp].min(), train_new[sp].max()], 'tight')
     plt.title(sp)
 
+
 acc_plt('H2O2')
+
+import random
+
+f, axarr = plt.subplots(3, 2)
+for i in range(3):
+    sp = random.choice(output)
+    axarr[i, 0].plot(train_new[sp], df_y_prdt_inv[sp], 'kd', ms=1)
+    axarr[i, 0].set_title(sp)
+    axarr[i, 0].set_aspect('equal', 'box')
+
+    sp = random.choice(output)
+    axarr[i, 1].plot(train_new[sp], df_y_prdt_inv[sp], 'kd', ms=1)
+    axarr[i, 1].set_title(sp)
+    axarr[i, 1].set_aspect('equal', 'box')
+    f.tight_layout()
+# sp = random.choice(output)
+# axarr[1, 0].plot(train_new[sp], df_y_prdt_inv[sp], 'kd', ms=1)
+# axarr[1, 0].set_title(sp)
+# axarr[1, 0].set_aspect('equal', 'box')
+#
+# sp = random.choice(output)
+# axarr[1, 1].plot(train_new[sp], df_y_prdt_inv[sp], 'kd', ms=1)
+# axarr[1, 1].set_title(sp)
+# axarr[1, 1].set_aspect('equal', 'box')
+#
+# sp = random.choice(output)
+# axarr[2, 0].plot(train_new[sp], df_y_prdt_inv[sp], 'kd', ms=1)
+# axarr[2, 0].set_title(sp)
+# axarr[2, 0].set_aspect('equal', 'box')
+#
+# sp = random.choice(output)
+# axarr[2, 1].plot(train_new[sp], df_y_prdt_inv[sp], 'kd', ms=1)
+# axarr[2, 1].set_title(sp)
+# axarr[2, 1].set_aspect('equal', 'box')
+
+
+
 
 # predict = model.predict(x_train[0])
 # predict[0,18]
