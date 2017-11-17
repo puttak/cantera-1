@@ -24,21 +24,22 @@ from sklearn.utils import shuffle
 from reactor_ode_p import data_gen
 
 # prepare data
-ini_T = np.linspace(1001, 3001, 20)
+ini_T = np.linspace(1001, 2001, 10)
 ini = []
-for i in np.linspace(2.5, 0., 20):
+for i in np.linspace(2, 0., 10):
     ini = ini + [(temp, i) for temp in ini_T]
 train_org, train_new = data_gen(ini)
 
 # train_org = train_org[0.000:0.001]
 # train_new = train_new[0.000:0.001]
 train_org, train_new = shuffle(train_org, train_new)
+train_new = train_new.drop('temperature', axis=1)
 
-output = train_org.columns
+in_item = train_org.columns
 label_values = []
 input_norm_scalers = {}
 input_std_scalers = {}
-for itm in output:
+for itm in in_item:
     print(itm)
     norm_scaler = MinMaxScaler()
     std_scaler = StandardScaler()
@@ -58,12 +59,13 @@ x_train = np.concatenate(
     label_values,
     axis=1)
 
-output = train_new.columns
+out_item = train_new.columns
+# out_item = out_item.delete(9)
 # output = ['H2']
 label_values = []
 label_norm_scalers = {}
 label_std_scalers = {}
-for itm in output:
+for itm in out_item:
     print(itm)
     # same input_label scaler
     # out = input_std_scalers[itm].transform(train_new[itm].values.reshape(-1, 1))
@@ -89,10 +91,10 @@ print('set up ANN')
 # ANN parameters
 dim_input = x_train.shape[1]
 dim_label = y_train.shape[1]
-n_neuron = 100
-batch_size = 512
-epochs = 100
-vsplit = 0.1
+n_neuron = 150
+batch_size = 1024
+epochs = 1000
+vsplit = 0.05
 batch_norm = True
 
 # This returns a tensor
@@ -114,7 +116,7 @@ predictions = Dense(dim_label, activation='linear')(x)
 
 model = Model(inputs=inputs, outputs=predictions)
 
-model.compile(loss='mae', optimizer='adam', metrics=['accuracy'])
+model.compile(loss='mse', optimizer='adam', metrics=['accuracy'])
 
 # checkpoint (save the best model based validate loss)
 filepath = "./tmp/weights.best.cntk.hdf5"
@@ -150,25 +152,23 @@ plt.legend(['train', 'test'], loc='upper right')
 model.load_weights("./tmp/weights.best.cntk.hdf5")
 
 predict = model.predict(x_train)
-df_y_prdt = pd.DataFrame(data=predict, columns=output)
+df_y_prdt = pd.DataFrame(data=predict, columns=out_item)
 
 error = (predict - y_train) / y_train
-df_error = abs(pd.DataFrame(data=error, columns=output))
+df_error = abs(pd.DataFrame(data=error, columns=out_item))
 
 y_prdt_inv = []
-for itm in output:
+for itm in out_item:
     print(itm)
     out = label_norm_scalers[itm].inverse_transform(0.5 * (df_y_prdt[itm].values.reshape(-1, 1) + 1))
     out = label_std_scalers[itm].inverse_transform(out)
     y_prdt_inv.append(out)
-y_prdt_inv = np.concatenate(
-    y_prdt_inv,
-    axis=1
-)
-df_y_prdt_inv = pd.DataFrame(data=y_prdt_inv, columns=output)
+y_prdt_inv = np.concatenate(y_prdt_inv, axis=1)
+y_prdt_inv=(y_prdt_inv>0)*y_prdt_inv
+df_y_prdt_inv = pd.DataFrame(data=y_prdt_inv, columns=out_item)
 
 error_inv = (y_prdt_inv - train_new) / (train_new + 1e-10)
-df_error_inv = abs(pd.DataFrame(data=error_inv, columns=output))
+df_error_inv = abs(pd.DataFrame(data=error_inv, columns=out_item))
 
 
 def acc_plt(sp):
@@ -186,12 +186,12 @@ import random
 
 f, axarr = plt.subplots(3, 2)
 for i in range(3):
-    sp = random.choice(output)
+    sp = random.choice(out_item)
     axarr[i, 0].plot(train_new[sp], df_y_prdt_inv[sp], 'kd', ms=1)
     axarr[i, 0].set_title(sp)
     axarr[i, 0].set_aspect('equal', 'box')
 
-    sp = random.choice(output)
+    sp = random.choice(out_item)
     axarr[i, 1].plot(train_new[sp], df_y_prdt_inv[sp], 'kd', ms=1)
     axarr[i, 1].set_title(sp)
     axarr[i, 1].set_aspect('equal', 'box')

@@ -67,7 +67,8 @@ def ignite(ini):
         train_org.append(state_org)
         train_new.append(state_new)
 
-        if (abs(state_res.max()) < 1e-5 and solver.t > 0.0001):
+        #if (abs(state_res.max()) < 1e-5 and solver.t > 0.0001):
+        if (abs(state_res.max()) < 1e-3 and gas['H2'].Y < 0.006):
             break
 
     return train_org, train_new

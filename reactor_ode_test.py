@@ -109,7 +109,7 @@ for temp in ini_T:
         i = i + 1
         input_val.append(state_old)
         target_val.append(state_new)
-        if (abs(state_res.max()) < 1e-5 and solver.t > 0.0001):
+        if (abs(state_res.max()) < 1e-3 and gas['H2'].Y < 0.006):
             break
 
 train_org = train_org.loc[:, (train_org != 0).any(axis=0)]
