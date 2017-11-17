@@ -22,7 +22,7 @@ import cntk
 
 from sklearn.utils import shuffle
 from reactor_ode_p import data_gen
-
+import pickle
 # prepare data
 ini_T = np.linspace(1001, 2001, 10)
 ini = []
@@ -86,6 +86,8 @@ y_train = np.concatenate(
     axis=1
 )
 
+with open('./tmp/scalers.pkl','wb') as f:
+    pickle.dump((input_norm_scalers,input_std_scalers,label_norm_scalers,label_std_scalers),f)
 ######################
 print('set up ANN')
 # ANN parameters
