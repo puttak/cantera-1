@@ -18,7 +18,7 @@ from keras import optimizers
 from keras.callbacks import ModelCheckpoint
 from res_block import res_block
 
-import cntk
+# import cntk
 
 from sklearn.utils import shuffle
 from reactor_ode_p import data_gen
@@ -93,9 +93,9 @@ print('set up ANN')
 # ANN parameters
 dim_input = x_train.shape[1]
 dim_label = y_train.shape[1]
-n_neuron = 150
-batch_size = 1024
-epochs = 1000
+n_neuron = 300
+batch_size = 1024*8*2
+epochs = 3000
 vsplit = 0.05
 batch_norm = True
 

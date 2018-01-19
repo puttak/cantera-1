@@ -1,21 +1,15 @@
 import time
-import sys
-
 import multiprocessing as mp
 import pandas as pd
 import numpy as np
 import scipy.integrate
 
 import matplotlib.pyplot as plt
+from sklearn.preprocessing import MinMaxScaler, StandardScaler
 
 import cantera as ct
+
 print("Running Cantera version: {}".format(ct.__version__))
-
-
-# gas = ct.Solution('gri30.xml')
-gas = ct.Solution('./data/Boivin_newTherm.cti')
-# Initial condition
-P = ct.one_atm
 
 
 class ReactorOde(object):
@@ -44,9 +38,18 @@ class ReactorOde(object):
 def ignite(ini):
     t_end = 1e-3
     dt = 1e-6
-    temp=ini[0]
-    nH=ini[1]
-    gas.TPX = temp, P, 'H2:'+str(nH)+',O2:1,N2:4'
+    temp = ini[0]
+    n_fuel = ini[1]
+    fuel = ini[2]
+
+    if fuel == 'H2':
+        gas = ct.Solution('./data/Boivin_newTherm.cti')
+    if fuel == 'CH4':
+        gas = ct.Solution('./data/grimech12.cti')
+        # gas = ct.Solution('gri30.xml')
+    P = ct.one_atm
+
+    gas.TPX = temp, P, fuel + ':' + str(n_fuel) + ',O2:1,N2:4'
     y0 = np.hstack((gas.T, gas.Y))
     ode = ReactorOde(gas)
     solver = scipy.integrate.ode(ode)
@@ -67,20 +70,26 @@ def ignite(ini):
         train_org.append(state_org)
         train_new.append(state_new)
 
-        #if (abs(state_res.max()) < 1e-5 and solver.t > 0.0001):
-        if (abs(state_res.max()) < 1e-3 and gas['H2'].Y < 0.006):
+        # if (abs(state_res.max()) < 1e-5 and solver.t > 0.0001):
+        if (abs(state_res.max()/state_org.max()) < 1e-4 and (solver.t/dt)>50):
             break
 
     return train_org, train_new
 
 
-def data_gen(ini):
+def data_gen(ini_Tn, fuel):
+    # ini_T = [1001, 1001, 1001, 1001]
 
-    #ini_T = [1001, 1001, 1001, 1001]
+    if fuel == 'H2':
+        gas = ct.Solution('./data/Boivin_newTherm.cti')
+    if fuel == 'CH4':
+        gas = ct.Solution('./data/grimech12.cti')
 
     print("multiprocessing:", end='')
     t_start = time.time()
     p = mp.Pool(processes=mp.cpu_count())
+
+    ini = [(x[0], x[1], fuel) for x in ini_Tn]
     training_data = p.map(ignite, ini)
     p.close()
 
@@ -89,48 +98,65 @@ def data_gen(ini):
     new = np.concatenate(new)
 
     columnNames = gas.species_names
-    columnNames = columnNames + ['temperature']
-    # columnNames = columnNames+['pressure']
+    columnNames = columnNames + ['T']
+    # columnNames = columnNames+['P']
 
     train_org = pd.DataFrame(data=org, columns=columnNames)
     train_new = pd.DataFrame(data=new, columns=columnNames)
 
     t_end = time.time()
-    tmp = t_end - t_start
-    print(" %8.3f seconds" % tmp)
-    return train_org,train_new
+    print(" %8.3f seconds" % (t_end - t_start))
+
+    return train_org, train_new
+
+
+def data_scaling(input, norm=None, std=None):
+    if not norm:
+        # print(1)
+        norm = MinMaxScaler()
+        std = StandardScaler()
+        out = std.fit_transform(input)
+        out = 2 * norm.fit_transform(out) - 1
+    else:
+        # print(2)
+        out = std.transform(input)
+        out = 2 * norm.transform(out) - 1
+
+    # if not norm:
+    #     norm = MinMaxScaler()
+    #     std = StandardScaler()
+    #     out = norm.fit_transform(input)
+    # else:
+    #     out = norm.transform(input)
+
+    # if not norm:
+    #     # print(1)
+    #     norm = MinMaxScaler()
+    #     std = StandardScaler()
+    #     out = std.fit_transform(input)
+    #     out = norm.fit_transform(out)
+    # else:
+    #     # print(2)
+    #     out = std.transform(input)
+    #     out = norm.transform(out)
+
+    return out, norm, std
+
+
+def data_inverse(input, norm, std):
+    out = norm.inverse_transform(0.5 * (input + 1))
+    out = std.inverse_transform(out)
+
+    # out = norm.inverse_transform(input)
+
+    # out = norm.inverse_transform(input)
+    # out = std.inverse_transform(out)
+
+    return out
 
 
 if __name__ == "__main__":
     ini_T = np.linspace(1001, 3001, 1)
     ini = [(temp, 2) for temp in ini_T]
-    ini = ini+ [(temp, 1) for temp in ini_T]
-    a,b=data_gen(ini)
-
-    # ini_T = np.linspace(501, 3001, 100)
-    # #ini_T = [1001, 1001, 1001, 1001]
-    #
-    # print("multiprocessing:", end='')
-    # t_start = time.time()
-    # p = mp.Pool(processes=mp.cpu_count())
-    # training_data = p.map(ignite, ini_T)
-    # p.close()
-    #
-    # org, new = zip(*training_data)
-    # org = np.concatenate(org)
-    # new = np.concatenate(new)
-    #
-    # columnNames = gas.species_names
-    # columnNames = columnNames + ['temperature']
-    # # columnNames = columnNames+['pressure']
-    #
-    # train_org = pd.DataFrame(data=org, columns=columnNames)
-    # train_new = pd.DataFrame(data=new, columns=columnNames)
-    #
-    # t_end = time.time()
-    # tmp = t_end - t_start
-    # print(" %8.3f seconds" % tmp)
-
-
-
-
+    ini = ini + [(temp, 1) for temp in ini_T]
+    a, b = data_gen(ini, 'H2')
