@@ -12,8 +12,8 @@ import cantera as ct
 
 print("Running Cantera version: {}".format(ct.__version__))
 
-T = np.linspace(1001, 3101, 40)
-n = np.linspace(4, 0., 40)
+T = np.linspace(1001, 3101, 20)
+n = np.linspace(4, 0., 20)
 XX, YY = np.meshgrid(T, n)
 ini = np.concatenate((XX.reshape(-1, 1), YY.reshape(-1, 1)), axis=1)
 
@@ -33,7 +33,7 @@ def dl_react(temp, n_fuel, ini=None):
 
     # dl model
     t_end = 1e-3
-    dt = 1e-6
+    dt = 2e-7
     t = 0
 
     train_org = []
@@ -46,6 +46,11 @@ def dl_react(temp, n_fuel, ini=None):
 
         # inference
         state_new = test.inference(state_org)
+        #state_new_norm = state_new/state_new[0,:-1].sum()
+        #state_new_norm[0,-1]=state_new[0,-1]
+        #print(state_new[0,:-1].sum(),state_new_norm[0,:-1].sum())
+        print(state_new)
+        print(state_new[0, :-1].sum())
         train_new.append(state_new)
         state_res = state_new - state_org
 
@@ -90,4 +95,4 @@ def plot(n_fuel, sp, st_step):
         plt.plot(cmpr_show, 'r:', label='cmpr')
         plt.legend()
         plt.title('ini_t = ' + str(temp) + ': ' + sp)
-    return ode_o
+    return dl_o,dl_n

@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 from string import ascii_lowercase
 
 from sklearn import model_selection, metrics
+from sklearn.preprocessing import normalize
 
 # import cntk
 import os
@@ -22,6 +23,7 @@ from keras import optimizers
 from res_block import res_block
 from reactor_ode_p import data_gen, data_scaling, data_inverse
 
+
 # T = np.linspace(1501, 2001, 15)
 # n = np.linspace(1, 0., 15)
 # XX, YY = np.meshgrid(T, n)
@@ -32,8 +34,8 @@ from reactor_ode_p import data_gen, data_scaling, data_inverse
 # x_input, y_target = shuffle(x_input, y_target)
 # y_target = y_target.drop('temperature', axis=1)
 
-#x_input, norm_x, std_x = data_scaling(df_x_input)
-#y_target, norm_y, std_y = data_scaling(df_y_target)
+# x_input, norm_x, std_x = data_scaling(df_x_input)
+# y_target, norm_y, std_y = data_scaling(df_y_target)
 
 # x_train, x_test, y_train, y_test = model_selection.train_test_split(x_input, y_target,
 #                                                                     test_size=0.1,
@@ -52,12 +54,12 @@ class combustionML(object):
     # def __init__(self, df_x_input, df_y_target, x_train, x_test, y_train, y_test):
     def __init__(self, df_x_input, df_y_target):
         x_train, x_test, y_train, y_test = model_selection.train_test_split(df_x_input, df_y_target,
-                                                                    test_size=0.3,
-                                                                    random_state=42)
+                                                                            test_size=0.3,
+                                                                            random_state=42)
         self.x_train, self.norm_x, self.std_x = data_scaling(x_train)
         self.y_train, self.norm_y, self.std_y = data_scaling(y_train)
-        x_test, _, _ = data_scaling(x_test,self.norm_x,self.std_x)
-        #y_test, _, _ = data_scaling(y_test,norm_y,std_y)
+        x_test, _, _ = data_scaling(x_test, self.norm_x, self.std_x)
+        # y_test, _, _ = data_scaling(y_test,norm_y,std_y)
 
         self.df_x_input = df_x_input
         self.df_y_target = df_y_target
@@ -69,7 +71,6 @@ class combustionML(object):
         self.callbacks_list = None
         self.vsplit = None
         self.predict = None
-
 
     def composeResnetModel(self, n_neurons=200, blocks=2, drop1=0.1, loss='mse', optimizer='adam', batch_norm=False):
         ######################
@@ -106,7 +107,7 @@ class combustionML(object):
                                      period=10)
         self.callbacks_list = [checkpoint]
 
-    def fitModel(self, batch_size=1024, epochs=400, vsplit=0.2):
+    def fitModel(self, batch_size=1024, epochs=400, vsplit=0.3):
         # fit the model
         self.vsplit = vsplit
         self.history = self.model.fit(
@@ -129,14 +130,21 @@ class combustionML(object):
         print(R2_score)
         return R2_score
 
-    def inference(self,x):
-        #self.model.load_weights("./tmp/weights.best.cntk.hdf5")
-
-        tmp,_,_=data_scaling(x, self.norm_x,self.std_x)
+    def inference(self, x):
+        # self.model.load_weights("./tmp/weights.best.cntk.hdf5")
+        # print(' new')
+        tmp, _, _ = data_scaling(x, self.norm_x, self.std_x)
         predict = self.model.predict(tmp)
+        # inverse for out put
         out = data_inverse(predict, self.norm_y, self.std_y)
+        # eliminate negative values
+        out[out < 0] = 0
+        # normalized total mass fraction to 1
+        out_y = out[:, :-1]
+        out_y = normalize(out_y, axis=1, norm='l1')
+        out_norm = np.concatenate((out_y, out[:, -1].reshape(-1, 1)), axis=1)
 
-        return out
+        return out_norm
 
     def acc_plt(self, sp):
         plt.figure()
@@ -144,8 +152,8 @@ class combustionML(object):
         plt.axis('tight')
         plt.axis('equal')
         # plt.axis([train_new[sp].min(), train_new[sp].max(), train_new[sp].min(), train_new[sp].max()], 'tight')
-        r2 = round(metrics.r2_score(self.y_test[sp],self.predict[sp]),6)
-        plt.title(sp+' : r2 = '+str(r2))
+        r2 = round(metrics.r2_score(self.y_test[sp], self.predict[sp]), 6)
+        plt.title(sp + ' : r2 = ' + str(r2))
 
     # loss
     def plt_loss(self):
@@ -168,8 +176,8 @@ class combustionML(object):
 
 
 if __name__ == "__main__":
-    T = np.linspace(1001, 3101, 100)
-    n = np.linspace(4, 0., 100)
+    T = np.linspace(1001, 3101, 20)
+    n = np.linspace(4, 0., 20)
     XX, YY = np.meshgrid(T, n)
     ini = np.concatenate((XX.reshape(-1, 1), YY.reshape(-1, 1)), axis=1)
 

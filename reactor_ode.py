@@ -75,7 +75,7 @@ dt = 1e-6
 i = 0
 input_val = []
 target_val = []
-ini_T = np.linspace(1001, 2001, 20)
+ini_T = np.linspace(1001, 2001, 1)
 for temp in ini_T:
     gas.TPX = temp, P, 'H2:2,O2:1,N2:4'
     y0 = np.hstack((gas.T, gas.Y))
@@ -121,6 +121,6 @@ if __name__ == "__main__":
     plt.legend(L1 + L2, [line.get_label() for line in L1 + L2], loc='lower right')
 
     plt.figure()
-    plt.semilogx(train_new.index, train_new['H2'], '-o')
+    plt.semilogx(train_new.index, train_new['H'], '-o')
 
     plt.show()

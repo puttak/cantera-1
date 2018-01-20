@@ -147,6 +147,7 @@ def data_inverse(input, norm, std):
     out = norm.inverse_transform(0.5 * (input + 1))
     out = std.inverse_transform(out)
 
+    # print('min max norm')
     # out = norm.inverse_transform(input)
 
     # out = norm.inverse_transform(input)
