@@ -66,12 +66,18 @@ def ignite(ini):
         state_new = np.hstack([gas[gas.species_names].Y, gas.T])
         # state_new = np.hstack([gas[gas.species_names].Y])
         state_res = state_new - state_org
+        res = abs(state_res[state_org!=0]/state_org[state_org!=0])
+        # res[res==np.inf]=0
+        # res = np.nan_to_num(res)
+        # res=res[res!=0]
+        # print(res.max())
+
         # Update the sample
         train_org.append(state_org)
         train_new.append(state_new)
 
-        # if (abs(state_res.max()) < 1e-5 and solver.t > 0.0001):
-        if (abs(state_res.max()/state_org.max()) < 1e-5 and (solver.t/dt)>100):
+        # if (abs(state_res.max() / state_org.max()) < 1e-5 and (solver.t / dt) > 200):
+        if (res.max() < 1e-4 and (solver.t / dt) > 100):
             break
 
     return train_org, train_new
