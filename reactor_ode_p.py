@@ -77,7 +77,7 @@ def ignite(ini):
         train_new.append(state_new)
 
         # if (abs(state_res.max() / state_org.max()) < 1e-5 and (solver.t / dt) > 200):
-        if (res.max() < 1e-4 and (solver.t / dt) > 100):
+        if (res.max() < 1e-5 and (solver.t / dt) > 100):
             break
 
     return train_org, train_new

@@ -53,31 +53,13 @@ def dl_react(nns, class_scaler,kmeans, temp, n_fuel, ini=None):
     while t < t_end:
         train_org.append(state_org)
 
-        # select neural network
-        # print(np.reshape(ini, (1, -1)))
-        # b=np.reshape(ini, (1, -1))
-        # print(b.shape)
         tmp = class_scaler.transform(ini)
         a = kmeans.predict(tmp)
         for i in a:
             nn=nns[i]
 
-        # if state_org[0, 1] > swt:
-        #     nn = nn_l
-        #     print('l')
-        #     # break
-        # else:
-        #     nn = nn_s
-
         # inference
         state_new = nn.inference(state_org)
-
-        # state_new_norm = state_new/state_new[0,:-1].sum()
-        # state_new_norm[0,-1]=state_new[0,-1]
-        # print(state_new[0,:-1].sum(),state_new_norm[0,:-1].sum())
-
-        # print(state_new)
-        # print(state_new[0, :-1].sum())
 
         train_new.append(state_new)
         state_res = state_new - state_org
@@ -89,7 +71,7 @@ def dl_react(nns, class_scaler,kmeans, temp, n_fuel, ini=None):
         # if abs(state_res.max() / state_org.max()) < 1e-4 and (t / dt) > 100:
         if res.max() < 1e-4 and (t / dt) > 100:
             break
-        if state_org[0, 1] > 1e-1:
+        if state_org[0, :-1].sum() > 1.5:
             break
 
     train_org = np.concatenate(train_org, axis=0)
@@ -332,8 +314,9 @@ if __name__ == "__main__":
     # df_x_input_s = df_x_input_s.reset_index(drop=True)
     # df_y_target_s = df_y_target_s.reset_index(drop=True)
 
-    tot_clusters = 8
-    class_scaler = MinMaxScaler()
+    tot_clusters = 10
+    #class_scaler = MinMaxScaler()
+    class_scaler = StandardScaler()
     data = class_scaler.fit_transform(df_x_input)
     kmeans = KMeans(n_clusters=tot_clusters).fit(data)
 
@@ -354,7 +337,8 @@ if __name__ == "__main__":
         nn.acc_plt(sp)
         nns.append(nn)
 
-    dl_react(nns,class_scaler,kmeans,1001,2,df_x_input_l.values[0])
+    dl_react(nns, class_scaler, kmeans, 1001, 2, df_x_input_l.values[0].reshape(1,-1))
+    cut_plot(nns, class_scaler, kmeans, 2, 'H', 0)
 
     # bop = False
     # if bop:
