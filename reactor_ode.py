@@ -116,11 +116,15 @@ if __name__ == "__main__":
     plt.ylabel('Temperature (K)')
     plt.twinx()
     # L2 = plt.plot(states.t, states('OH').Y, label='OH', lw=2)
-    L2 = plt.plot(states('OH').Y, label='OH', lw=2)
+    # L2 = plt.plot(states('OH').Y, label='OH', lw=2)
+    L2 = plt.plot(states('H').Y*states('O').Y, label='OH', lw=2)
+
     plt.ylabel('Mass Fraction')
     plt.legend(L1 + L2, [line.get_label() for line in L1 + L2], loc='lower right')
 
     plt.figure()
     plt.semilogx(train_new.index, train_new['H'], '-o')
+    #plt.plot(train_new['H'], '-')
+    plt.xlim([0,200])
 
     plt.show()

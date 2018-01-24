@@ -71,7 +71,7 @@ def ignite(ini):
         train_new.append(state_new)
 
         # if (abs(state_res.max()) < 1e-5 and solver.t > 0.0001):
-        if (abs(state_res.max()/state_org.max()) < 1e-4 and (solver.t/dt)>50):
+        if (abs(state_res.max()/state_org.max()) < 1e-5 and (solver.t/dt)>100):
             break
 
     return train_org, train_new
@@ -111,49 +111,59 @@ def data_gen(ini_Tn, fuel):
 
 
 def data_scaling(input, norm=None, std=None):
+    # if not norm:
+    #     # print(1)
+    #     norm = MinMaxScaler()
+    #     std = StandardScaler()
+    #     out = std.fit_transform(input)
+    #     out = 2 * norm.fit_transform(out) - 1
+    # else:
+    #     # print(2)
+    #     out = std.transform(input)
+    #     out = 2 * norm.transform(out) - 1
+
     if not norm:
         # print(1)
         norm = MinMaxScaler()
         std = StandardScaler()
         out = std.fit_transform(input)
-        out = 2 * norm.fit_transform(out) - 1
+        out = norm.fit_transform(out)
     else:
         # print(2)
         out = std.transform(input)
-        out = 2 * norm.transform(out) - 1
+        out = norm.transform(out)
 
-    # if not norm:
+    # if not norm or not std:
     #     norm = MinMaxScaler()
     #     std = StandardScaler()
     #     out = norm.fit_transform(input)
     # else:
     #     out = norm.transform(input)
 
-    # if not norm:
-    #     # print(1)
+    # if not norm or not std:
     #     norm = MinMaxScaler()
     #     std = StandardScaler()
     #     out = std.fit_transform(input)
-    #     out = norm.fit_transform(out)
     # else:
-    #     # print(2)
     #     out = std.transform(input)
-    #     out = norm.transform(out)
 
     return out, norm, std
 
 
 def data_inverse(input, norm, std):
-    out = norm.inverse_transform(0.5 * (input + 1))
+    # out = norm.inverse_transform(0.5 * (input + 1))
+    # out = std.inverse_transform(out)
+
+    out = norm.inverse_transform(input)
     out = std.inverse_transform(out)
 
     # print('min max norm')
     # out = norm.inverse_transform(input)
 
-    # out = norm.inverse_transform(input)
-    # out = std.inverse_transform(out)
+    # print('std norm')
+    # out = std.inverse_transform(input)
 
-    return out
+    return np.double(out)
 
 
 if __name__ == "__main__":
