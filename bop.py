@@ -53,7 +53,7 @@ def dl_react(nns, class_scaler,kmeans, temp, n_fuel, ini=None):
     while t < t_end:
         train_org.append(state_org)
 
-        tmp = class_scaler.transform(ini)
+        tmp = class_scaler.transform(state_org)
         a = kmeans.predict(tmp)
         for i in a:
             nn=nns[i]
@@ -81,8 +81,8 @@ def dl_react(nns, class_scaler,kmeans, temp, n_fuel, ini=None):
     return train_org, train_new
 
 
-def cmp_plot(nn_s, nn_l, swt, n_fuel, sp, st_step):
-    for temp in [1001]:
+def cmp_plot(nns,class_scaler,kmeans, n_fuel, sp, st_step):
+    for temp in [1001, 1201, 1801]:
         # for temp in [1001, 1101, 1201]:
         start = st_step
 
@@ -91,48 +91,53 @@ def cmp_plot(nn_s, nn_l, swt, n_fuel, sp, st_step):
         ode_o = np.delete(ode_o, 8, 1)
         ode_n = np.delete(ode_n, 8, 1)
         ode_o = pd.DataFrame(data=np.asarray(ode_o),
-                             columns=nn_s.df_x_input.columns)
+                             columns=nns[0].df_x_input.columns)
         ode_n = pd.DataFrame(data=np.asarray(ode_n),
-                             columns=nn_s.df_y_target.columns)
+                             columns=nns[0].df_y_target.columns)
+        cmpr=[]
+        for input in ode_o.values:
 
-        cmpr_s = nn_s.inference(ode_o)
-        cmpr_s = pd.DataFrame(data=cmpr_s,
-                              columns=nn_s.df_x_input.columns)
+            input = input.reshape(1,-1)
+#            print(input)
+            tmp = class_scaler.transform(input)
+#            print(tmp)
+            a = kmeans.predict(tmp)
+            print(a)
+            for i in a:
+                nn=nns[i]
 
-        cmpr_l = nn_l.inference(ode_o)
-        cmpr_l = pd.DataFrame(data=cmpr_l,
-                              columns=nn_l.df_x_input.columns)
+            # inference
+            state_new = nn.inference(input)
+            cmpr.append(state_new)
+        cmpr = np.concatenate(cmpr, axis=0)
+        cmpr = pd.DataFrame(data=cmpr,
+                              columns=nns[0].df_x_input.columns)
 
-        dl_o, dl_n = dl_react(nn_s, nn_l, swt, temp, n_fuel, ini=ode_o.values[start].reshape(1, -1))
+
+
 
         plt.figure()
 
         ode_show = ode_n[sp][start:].values
-        cmpr_s_show = cmpr_s[sp][start:].values
-        cmpr_l_show = cmpr_l[sp][start:].values
-        dl_show = dl_n[sp]
+        cmpr_show = cmpr[sp][start:].values
 
         plt.semilogy(ode_show, 'kd', label='ode', ms=1)
-        plt.semilogy(dl_show, 'b-', label='dl')
-        plt.semilogy(cmpr_s_show, 'r:', label='cmpr_s')
-        plt.semilogy(cmpr_l_show, 'r-', label='cmpr_l')
+        plt.semilogy(cmpr_show, 'r:', label='cmpr_s')
         plt.legend()
         plt.title('ini_t = ' + str(temp) + ': ' + sp)
 
         # plt.figure()
         # plt.plot(ode_show, 'kd', label='ode', ms=1)
-        # plt.plot(dl_show, 'b-', label='dl')
-        # plt.plot(cmpr_s_show, 'r:', label='cmpr_s')
         # plt.plot(cmpr_l_show, 'r-', label='cmpr_l')
         # plt.legend()
         # plt.title('ini_t = ' + str(temp) + ': ' + sp)
 
-    return dl_o, dl_n
+    # return dl_o, dl_n
 
 
 def cut_plot(nns, class_scaler,kmeans, n_fuel, sp, st_step):
     # for temp in [1001, 1101, 1201]:
-    for temp in [1001]:
+    for temp in [1001,1201,1801]:
         start = st_step
 
         # ode integration
@@ -156,6 +161,26 @@ def cut_plot(nns, class_scaler,kmeans, n_fuel, sp, st_step):
         plt.legend()
         plt.title('ini_t = ' + str(temp) + ': ' + sp)
 
+
+class classScaler(object):
+    def __init__(self):
+        self.norm = None
+        self.std = None
+    def fit_transform(self, input):
+
+        self.norm = MinMaxScaler()
+        self.std = StandardScaler()
+        out = self.std.fit_transform(input)
+        out = self.norm.fit_transform(out)
+        return out
+
+
+    def transform(self, input):
+
+        out = self.std.transform(input)
+        out = self.norm.transform(out)
+
+        return out
 
 
 class combustionML(object):
@@ -289,7 +314,7 @@ class combustionML(object):
 
 
 if __name__ == "__main__":
-    T = np.linspace(1001, 1201, 10)
+    T = np.linspace(1001, 2001, 10)
     n = np.linspace(8, 0., 10)
     XX, YY = np.meshgrid(T, n)
     ini = np.concatenate((XX.reshape(-1, 1), YY.reshape(-1, 1)), axis=1)
@@ -315,14 +340,16 @@ if __name__ == "__main__":
     # df_y_target_s = df_y_target_s.reset_index(drop=True)
 
     tot_clusters = 10
-    #class_scaler = MinMaxScaler()
-    class_scaler = StandardScaler()
+    # class_scaler = MinMaxScaler()
+    # class_scaler = StandardScaler()
+    class_scaler = classScaler()
     data = class_scaler.fit_transform(df_x_input)
     kmeans = KMeans(n_clusters=tot_clusters).fit(data)
 
     nns = []
     for i in range(tot_clusters):
         clt = kmeans.labels_ == i
+        print(i)
 
         df_x_input_l = df_x_input[clt]
         df_y_target_l = df_y_target[clt]
