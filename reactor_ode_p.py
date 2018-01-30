@@ -77,7 +77,8 @@ def ignite(ini):
         train_new.append(state_new)
 
         # if (abs(state_res.max() / state_org.max()) < 1e-5 and (solver.t / dt) > 200):
-        if (res.max() < 1e-5 and (solver.t / dt) > 100):
+        if ((res.max() < 1e-3 and (solver.t / dt) > 50)) or (gas['H2'].Y < 0.005 or gas['H2'].Y >0.995):
+        # if res.max() < 1e-5:
             break
 
     return train_org, train_new
@@ -128,15 +129,27 @@ def data_scaling(input, norm=None, std=None):
     #     out = std.transform(input)
     #     out = 2 * norm.transform(out) - 1
 
+    # if not norm:
+    #     # print(1)
+    #     norm = MinMaxScaler()
+    #     std = StandardScaler()
+    #     out = std.fit_transform(input)
+    #     out = norm.fit_transform(out)
+    # else:
+    #     # print(2)
+    #     out = std.transform(input)
+    #     out = norm.transform(out)
+
+    out = np.log(np.asarray(input)+1e-20)
     if not norm:
         # print(1)
         norm = MinMaxScaler()
         std = StandardScaler()
-        out = std.fit_transform(input)
+        #out = std.fit_transform(input)
         out = norm.fit_transform(out)
     else:
         # print(2)
-        out = std.transform(input)
+        # out = std.transform(input)
         out = norm.transform(out)
 
     # if not norm or not std:
@@ -160,8 +173,11 @@ def data_inverse(input, norm, std):
     # out = norm.inverse_transform(0.5 * (input + 1))
     # out = std.inverse_transform(out)
 
+    # out = norm.inverse_transform(input)
+    # out = std.inverse_transform(out)
+
     out = norm.inverse_transform(input)
-    out = std.inverse_transform(out)
+    out = np.exp(out)
 
     # print('min max norm')
     # out = norm.inverse_transform(input)
