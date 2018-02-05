@@ -23,63 +23,71 @@ class ReactorOde(object):
         """the ODE function, y' = f(t,y) """
 
         # State vector is [T, Y_1, Y_2, ... Y_K]
-        self.gas.set_unnormalized_mass_fractions(y[1:])
+        # self.gas.set_unnormalized_mass_fractions(y[1:])
+        self.gas.set_unnormalized_mole_fractions(y[1:])
         self.gas.TP = y[0], self.P
         rho = self.gas.density
 
         wdot = self.gas.net_production_rates
         dTdt = - (np.dot(self.gas.partial_molar_enthalpies, wdot) /
                   (rho * self.gas.cp))
-        dYdt = wdot * self.gas.molecular_weights / rho
+        #dYdt = wdot * self.gas.molecular_weights / rho
+        dYdt = wdot / rho
 
         return np.hstack((dTdt, dYdt))
 
 
 def ignite(ini):
-    t_end = 1e-3
-    dt = 1e-6
+    train_org = []
+    train_new = []
+
     temp = ini[0]
     n_fuel = ini[1]
     fuel = ini[2]
 
-    if fuel == 'H2':
-        gas = ct.Solution('./data/Boivin_newTherm.cti')
-    if fuel == 'CH4':
-        gas = ct.Solution('./data/grimech12.cti')
-        # gas = ct.Solution('gri30.xml')
-    P = ct.one_atm
+    t_end = 1e-3
+    for dt in[1e-6, 5e-7, 2e-7, 1e-7]:
+        if fuel == 'H2':
+            gas = ct.Solution('./data/Boivin_newTherm.cti')
+        if fuel == 'CH4':
+            gas = ct.Solution('./data/grimech12.cti')
+            # gas = ct.Solution('gri30.xml')
+        P = ct.one_atm
 
-    gas.TPX = temp, P, fuel + ':' + str(n_fuel) + ',O2:1,N2:4'
-    y0 = np.hstack((gas.T, gas.Y))
-    ode = ReactorOde(gas)
-    solver = scipy.integrate.ode(ode)
-    solver.set_integrator('vode', method='bdf', with_jacobian=True)
-    solver.set_initial_value(y0, 0.0)
-    train_org = []
-    train_new = []
-    while solver.successful() and solver.t < t_end:
-        state_org = np.hstack([gas[gas.species_names].Y, gas.T])
-        # state_org = np.hstack([gas[gas.species_names].Y])
-        solver.integrate(solver.t + dt)
-        gas.TPY = solver.y[0], P, solver.y[1:]
-        # Extract the state of the reactor
-        state_new = np.hstack([gas[gas.species_names].Y, gas.T])
-        # state_new = np.hstack([gas[gas.species_names].Y])
-        state_res = state_new - state_org
-        res = abs(state_res[state_org!=0]/state_org[state_org!=0])
-        # res[res==np.inf]=0
-        # res = np.nan_to_num(res)
-        # res=res[res!=0]
-        # print(res.max())
+        gas.TPX = temp, P, fuel + ':' + str(n_fuel) + ',O2:1,N2:4'
+        # y0 = np.hstack((gas.T, gas.Y))
+        x0 = np.hstack((gas.T, gas.X))
+        ode = ReactorOde(gas)
+        solver = scipy.integrate.ode(ode)
+        solver.set_integrator('vode', method='bdf', with_jacobian=True)
+        # solver.set_initial_value(y0, 0.0)
+        solver.set_initial_value(x0, 0.0)
 
-        # Update the sample
-        train_org.append(state_org)
-        train_new.append(state_new)
+        while solver.successful() and solver.t < t_end:
+            # state_org = np.hstack([gas[gas.species_names].Y, gas.T, dt])
+            state_org = np.hstack([gas[gas.species_names].X, gas.T, dt])
 
-        # if (abs(state_res.max() / state_org.max()) < 1e-5 and (solver.t / dt) > 200):
-        if ((res.max() < 1e-3 and (solver.t / dt) > 50)) or (gas['H2'].Y < 0.005 or gas['H2'].Y >0.995):
-        # if res.max() < 1e-5:
-            break
+            solver.integrate(solver.t + dt)
+            # gas.TPY = solver.y[0], P, solver.y[1:]
+            gas.TPX = solver.y[0], P, solver.y[1:]
+            # Extract the state of the reactor
+            state_new = np.hstack([gas[gas.species_names].X, gas.T, dt])
+            # state_new = np.hstack([gas[gas.species_names].Y])
+            state_res = state_new - state_org
+            res = abs(state_res[state_org!=0]/state_org[state_org!=0])
+            # res[res==np.inf]=0
+            # res = np.nan_to_num(res)
+            # res=res[res!=0]
+            # print(res.max())
+
+            # Update the sample
+            train_org.append(state_org)
+            train_new.append(state_new)
+
+            # if (abs(state_res.max() / state_org.max()) < 1e-5 and (solver.t / dt) > 200):
+            if ((res.max() < 1e-3 and (solver.t / dt) > 50)) or (gas['H2'].Y < 0.005 or gas['H2'].Y >0.995):
+            # if res.max() < 1e-5:
+                break
 
     return train_org, train_new
 
@@ -106,7 +114,7 @@ def data_gen(ini_Tn, fuel):
 
     columnNames = gas.species_names
     columnNames = columnNames + ['T']
-    # columnNames = columnNames+['P']
+    columnNames = columnNames+['dt']
 
     train_org = pd.DataFrame(data=org, columns=columnNames)
     train_new = pd.DataFrame(data=new, columns=columnNames)
@@ -189,7 +197,7 @@ def data_inverse(input, norm, std):
 
 
 if __name__ == "__main__":
-    ini_T = np.linspace(1001, 3001, 1)
+    ini_T = np.linspace(1201, 1501, 4)
     ini = [(temp, 2) for temp in ini_T]
     ini = ini + [(temp, 1) for temp in ini_T]
     a, b = data_gen(ini, 'H2')

@@ -1,5 +1,5 @@
 import numpy as np
-from sklearn.preprocessing import MinMaxScaler, StandardScaler
+from sklearn.preprocessing import MinMaxScaler, StandardScaler, MaxAbsScaler, QuantileTransformer
 
 # import cantera as ct
 #
@@ -11,13 +11,14 @@ def data_scaling(input, case, norm=None, std=None):
     switcher={
         'std': 'std',
         'nrm': 'nrm',
-        'log':'log'
+        'log':'log',
+        'tan':'tan'
     }
 
     if switcher.get(case) == 'std':
         if not norm:
             # print(1)
-            norm = MinMaxScaler()
+            norm = MaxAbsScaler()
             std = StandardScaler()
             out = std.fit_transform(input)
             out = norm.fit_transform(out)
@@ -37,7 +38,7 @@ def data_scaling(input, case, norm=None, std=None):
             out = norm.transform(input)
 
     if switcher.get(case) == 'log':
-        out = np.log(np.asarray(input)+1e-20)
+        out = np.log(np.asarray(input) +1e-20)
         if not norm:
             norm = MinMaxScaler()
             std = StandardScaler()
@@ -56,7 +57,16 @@ def data_scaling(input, case, norm=None, std=None):
     #         out = norm.transform(input)
     #         out = np.log(np.asarray(out) + 1e-20)
     #         out = std.transform(out)
+    if switcher.get(case) == 'tan':
 
+        if not norm:
+            norm = MinMaxScaler()
+            std = StandardScaler()
+            out = norm.fit_transform(input)
+
+        else:
+            out = norm.transform(input)
+        out = np.tan((2 * np.asarray(out) - 1) / (2 * np.pi + 1e-20))
 
 
     return out, norm, std
@@ -67,7 +77,8 @@ def data_inverse(input,case, norm, std):
     switcher={
         'std':'std',
         'nrm':'nrm',
-        'log':'log'
+        'log':'log',
+        'tan':'tan'
     }
 
     if switcher.get(case) == 'std':
@@ -84,6 +95,10 @@ def data_inverse(input,case, norm, std):
     #     out = std.inverse_transform(input)
     #     out = np.exp(out)
     #     out = norm.inverse_transform(out)
+    if switcher.get(case) == 'tan':
+        # out = norm.inverse_transform(input)
+        out = (2*np.pi*np.arctan(input)+1)/2
+        out = norm.inverse_transform(out)
 
-    return np.double(out)
+    return out
 
