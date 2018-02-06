@@ -23,7 +23,8 @@ from keras import optimizers
 
 from res_block import res_block
 from reactor_ode_p import data_gen, ignite
-from data_scaling import data_scaling, data_inverse
+# from data_scaling import data_scaling, data_inverse
+from dataScaling import dataScaling
 
 import cantera as ct
 
@@ -175,21 +176,21 @@ def cmp_plot(nns, n_fuel, sp, st_step, swt):
         ode_n = ode_n.drop('dt', axis=1)
 
         cmpr = []
-        for input in ode_o.values:
+        for input_data in ode_o.values:
 
-            input = input.reshape(1, -1)
+            input_data = input_data.reshape(1, -1)
 
             # inference
             # print(input)
-            state_std = nns[0].inference(input)
+            state_std = nns[0].inference(input_data)
             # state_std[state_std<1e-4] = 0
 
-            state_log = nns[1].inference(input)
+            state_log = nns[1].inference(input_data)
             # state_log[state_log>=1e-4] = 0
 
             state_new = state_log
             #            print(state_new)
-            acc, _, _ = data_scaling(input, nns[1].scaler_case, nns[1].norm_x, nns[1].std_x)
+            acc = nns[1].x_scaling.transform(input_data)
             for i in range(9):
                 # print(i)
                 # print(state_log)
@@ -209,16 +210,16 @@ def cmp_plot(nns, n_fuel, sp, st_step, swt):
 
             # H mole conservation
             if state_new[0, 0]>2e-2:
-                state_new[0, 0] = 2*input[0, 0] + 1*input[0, 1] + 1* input[0, 3] \
-                              + 2* input[0, 5] + 1* input[0, 6] + 2 * input[0, 7] \
+                state_new[0, 0] = 2*input_data[0, 0] + 1*input_data[0, 1] + 1* input_data[0, 3] \
+                              + 2* input_data[0, 5] + 1* input_data[0, 6] + 2 * input_data[0, 7] \
                               - 1*state_new[0, 1] - 1 * state_new[0, 3] \
                               - 2*state_new[0, 5] - 1* state_new[0, 6] - 2* state_new[0, 7]
                 state_new[0, 0] = max(0.5 * state_new[0, 0], 0)
 
             # O mole conservation
             if state_new[0, 2]>2e-2:
-                state_new[0, 2] = 2*input[0, 2] + 1*input[0, 3] + 1* input[0, 4] \
-                              + 1* input[0, 5] + 2* input[0, 6] + 2 * input[0, 7] \
+                state_new[0, 2] = 2*input_data[0, 2] + 1*input_data[0, 3] + 1* input_data[0, 4] \
+                              + 1* input_data[0, 5] + 2* input_data[0, 6] + 2 * input_data[0, 7] \
                               - 1*state_new[0, 3] - 1 * state_new[0, 4] \
                               - 1*state_new[0, 5] - 2* state_new[0, 6] - 2* state_new[0, 7]
                 state_new[0, 2] = max(0.5 * state_new[0, 2], 0)
@@ -262,23 +263,20 @@ def cmp_plot(nns, n_fuel, sp, st_step, swt):
     return cmpr, ode_o, ode_n
 
 
-
-
-
 class classScaler(object):
     def __init__(self):
         self.norm = None
         self.std = None
 
-    def fit_transform(self, input):
+    def fit_transform(self, input_data):
         self.norm = MinMaxScaler()
         self.std = StandardScaler()
-        out = self.std.fit_transform(input)
+        out = self.std.fit_transform(input_data)
         out = self.norm.fit_transform(out)
         return out
 
-    def transform(self, input):
-        out = self.std.transform(input)
+    def transform(self, input_data):
+        out = self.std.transform(input_data)
         out = self.norm.transform(out)
 
         return out
@@ -300,9 +298,12 @@ class combustionML(object):
         x_train, x_test, y_train, y_test = model_selection.train_test_split(df_x_input, df_y_target,
                                                                             test_size=0.1,
                                                                             random_state=42)
-        self.x_train, self.norm_x, self.std_x = data_scaling(x_train, scaling_case)
-        self.y_train, self.norm_y, self.std_y = data_scaling(y_train, scaling_case)
-        x_test, _, _ = data_scaling(x_test, scaling_case, self.norm_x, self.std_x)
+
+        self.x_scaling = dataScaling()
+        self.y_scaling = dataScaling()
+        self.x_train = self.x_scaling.fit_transform(x_train, scaling_case)
+        self.y_train = self.y_scaling.fit_transform(y_train, scaling_case)
+        x_test = self.x_scaling.transform(x_test)
 
         self.scaling_case = scaling_case
         self.df_x_input = df_x_input
@@ -317,7 +318,7 @@ class combustionML(object):
         self.predict = None
 
     def composeResnetModel(self, n_neurons=200, blocks=2, drop1=0.1, loss='mse', optimizer='adam', batch_norm=False):
-        ######################
+
         print('set up ANN')
         floatx = 'float32'
         K.set_floatx(floatx)
@@ -355,6 +356,7 @@ class combustionML(object):
         self.callbacks_list = [checkpoint]
 
     def fitModel(self, batch_size=1024, epochs=400, vsplit=0.3):
+
         self.vsplit = vsplit
         self.history = self.model.fit(
             self.x_train, self.y_train,
@@ -370,7 +372,8 @@ class combustionML(object):
         self.model.load_weights("./tmp/weights.best.cntk.hdf5")
 
         predict = self.model.predict(self.x_test.values)
-        predict = data_inverse(predict, self.scaling_case, self.norm_y, self.std_y)
+        # predict = data_inverse(predict, self.scaling_case, self.norm_y, self.std_y)
+        predict = self.y_scaling.inverse_transform(predict)
         self.predict = pd.DataFrame(data=predict, columns=self.df_y_target.columns)
 
         R2_score = -abs(metrics.r2_score(predict, self.y_test))
@@ -378,10 +381,12 @@ class combustionML(object):
         return R2_score
 
     def inference(self, x):
-        tmp, _, _ = data_scaling(x, self.scaling_case, self.norm_x, self.std_x)
+        # tmp, _, _ = data_scaling(x, self.scaling_case, self.norm_x, self.std_x)
+        tmp = self.x_scaling.transform(x)
         predict = self.model.predict(tmp)
         # inverse for out put
-        out = data_inverse(predict, self.scaling_case, self.norm_y, self.std_y)
+        # out = data_inverse(predict, self.scaling_case, self.norm_y, self.std_y)
+        out = self.y_scaling.inverse_transform(predict)
         # eliminate negative values
         out[out < 0] = 0
         # normalized total mass fraction to 1
@@ -396,6 +401,7 @@ class combustionML(object):
         return out
 
     def plt_acc(self, sp):
+
         plt.figure()
         plt.plot(self.y_test[sp], self.predict[sp], 'kd', ms=1)
         plt.axis('tight')
@@ -405,6 +411,23 @@ class combustionML(object):
         r2 = round(metrics.r2_score(self.y_test[sp], self.predict[sp]), 6)
         plt.title(sp + ' : r2 = ' + str(r2))
         plt.show()
+
+        t_n = self.y_scaling.transform(self.y_test)
+        p_n = self.y_scaling.transform(self.predict)
+        t_n = pd.DataFrame(data=t_n, columns=self.df_y_target.columns)
+        p_n = pd.DataFrame(data=p_n, columns=self.df_y_target.columns)
+
+        plt.figure()
+        plt.plot(t_n[sp], p_n[sp], 'kd', ms=1)
+        plt.axis('tight')
+        plt.axis('equal')
+
+        # plt.axis([train_new[sp].min(), train_new[sp].max(), train_new[sp].min(), train_new[sp].max()], 'tight')
+        r2_n = round(metrics.r2_score(t_n[sp], p_n[sp]), 6)
+        plt.title(sp + ' nn: r2 = ' + str(r2_n))
+        plt.show()
+
+
 
     # loss
     def plt_loss(self):
@@ -421,7 +444,7 @@ class combustionML(object):
         print(hyper)
 
         self.composeResnetModel(n_neurons=hyper[0], blocks=hyper[1], drop1=hyper[2])
-        self.fitModel(epochs=1000, batch_size=1024 * 8)
+        self.fitModel(epochs=10, batch_size=1024 * 8)
 
         return self.prediction()
 
@@ -445,7 +468,7 @@ if __name__ == "__main__":
     r2s = []
 
     # nn_std = combustionML(df_x_input[df_y_target['H']>1e-6], df_y_target[df_y_target['H']>1e-6], 'std')
-    nn_std = combustionML(df_x_input, df_y_target, 'std')
+    nn_std = combustionML(df_x_input, df_y_target, 'tan')
     r2 = nn_std.run([600, 2, 0.])
     r2s.append(r2)
     nns.append(nn_std)

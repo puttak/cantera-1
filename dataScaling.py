@@ -1,0 +1,79 @@
+import numpy as np
+from sklearn.preprocessing import MinMaxScaler, StandardScaler, MaxAbsScaler, QuantileTransformer
+
+
+class dataScaling(object):
+    def __init__(self):
+        self.norm = None
+        self.std = None
+        self.case = None
+
+        self.switcher = {
+            'std': 'std',
+            'nrm': 'nrm',
+            'log': 'log',
+            'tan': 'tan'
+        }
+
+    def fit_transform(self, input_data, case):
+        self.case = case
+        if self.switcher.get(self.case) == 'std':
+            self.norm = MaxAbsScaler()
+            self.std = StandardScaler()
+            out = self.std.fit_transform(input_data)
+            out = self.norm.fit_transform(out)
+
+        if self.switcher.get(self.case) == 'nrm':
+            self.norm = MinMaxScaler()
+            self.std = StandardScaler()
+            out = self.norm.fit_transform(input_data)
+
+        if self.switcher.get(self.case) == 'log':
+            out = np.log(np.asarray(input_data) + 1e-20)
+            self.norm = MinMaxScaler()
+            self.std = StandardScaler()
+            out = self.norm.fit_transform(out)
+
+        if self.switcher.get(self.case) == 'tan':
+            self.norm = MinMaxScaler()
+            self.std = StandardScaler()
+            out = self.norm.fit_transform(input_data)
+            out = np.tan((2 * np.asarray(out) - 1) / (2 * np.pi + 1e-20))
+
+        return out
+
+    def transform(self, input_data):
+        if self.switcher.get(self.case) == 'std':
+            out = self.std.transform(input_data)
+            out = self.norm.transform(out)
+
+        if self.switcher.get(self.case) == 'nrm':
+            out = self.norm.transform(input_data)
+
+        if self.switcher.get(self.case) == 'log':
+            out = np.log(np.asarray(input_data) + 1e-20)
+            out = self.norm.transform(out)
+        if self.switcher.get(self.case) == 'tan':
+            out = self.norm.transform(input_data)
+            out = np.tan((2 * np.asarray(out) - 1) / (2 * np.pi + 1e-20))
+
+        return out
+
+    def inverse_transform(self, input_data):
+
+        if self.switcher.get(self.case) == 'std':
+            out = self.norm.inverse_transform(input_data)
+            out = self.std.inverse_transform(out)
+
+        if self.switcher.get(self.case) == 'nrm':
+            out = self.norm.inverse_transform(input_data)
+
+        if self.switcher.get(self.case) == 'log':
+            out = self.norm.inverse_transform(input_data)
+            out = np.exp(out)
+
+        if self.switcher.get(self.case) == 'tan':
+            out = (2 * np.pi * np.arctan(input_data) + 1) / 2
+            out = self.norm.inverse_transform(out)
+
+        return out
