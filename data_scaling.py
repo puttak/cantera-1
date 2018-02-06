@@ -1,44 +1,35 @@
 import numpy as np
 from sklearn.preprocessing import MinMaxScaler, StandardScaler, MaxAbsScaler, QuantileTransformer
 
-# import cantera as ct
-#
-# print("Running Cantera version: {}".format(ct.__version__))
 
-
-def data_scaling(input, case, norm=None, std=None):
-
-    switcher={
+def data_scaling(input_data, case, norm=None, std=None):
+    switcher = {
         'std': 'std',
         'nrm': 'nrm',
-        'log':'log',
-        'tan':'tan'
+        'log': 'log',
+        'tan': 'tan'
     }
 
     if switcher.get(case) == 'std':
         if not norm:
-            # print(1)
             norm = MaxAbsScaler()
             std = StandardScaler()
-            out = std.fit_transform(input)
+            out = std.fit_transform(input_data)
             out = norm.fit_transform(out)
         else:
-            # print(2)
-            out = std.transform(input)
+            out = std.transform(input_data)
             out = norm.transform(out)
 
     if switcher.get(case) == 'nrm':
         if not norm:
-            # print(1)
             norm = MinMaxScaler()
             std = StandardScaler()
-            out = norm.fit_transform(input)
+            out = norm.fit_transform(input_data)
         else:
-            # print(2)
-            out = norm.transform(input)
+            out = norm.transform(input_data)
 
     if switcher.get(case) == 'log':
-        out = np.log(np.asarray(input) +1e-20)
+        out = np.log(np.asarray(input_data) + 1e-20)
         if not norm:
             norm = MinMaxScaler()
             std = StandardScaler()
@@ -62,34 +53,32 @@ def data_scaling(input, case, norm=None, std=None):
         if not norm:
             norm = MinMaxScaler()
             std = StandardScaler()
-            out = norm.fit_transform(input)
+            out = norm.fit_transform(input_data)
 
         else:
-            out = norm.transform(input)
+            out = norm.transform(input_data)
         out = np.tan((2 * np.asarray(out) - 1) / (2 * np.pi + 1e-20))
-
 
     return out, norm, std
 
 
-def data_inverse(input,case, norm, std):
-
-    switcher={
-        'std':'std',
-        'nrm':'nrm',
-        'log':'log',
-        'tan':'tan'
+def data_inverse(input_data, case, norm, std):
+    switcher = {
+        'std': 'std',
+        'nrm': 'nrm',
+        'log': 'log',
+        'tan': 'tan'
     }
 
     if switcher.get(case) == 'std':
-        out = norm.inverse_transform(input)
+        out = norm.inverse_transform(input_data)
         out = std.inverse_transform(out)
 
     if switcher.get(case) == 'nrm':
-        out = norm.inverse_transform(input)
+        out = norm.inverse_transform(input_data)
 
     if switcher.get(case) == 'log':
-        out = norm.inverse_transform(input)
+        out = norm.inverse_transform(input_data)
         out = np.exp(out)
     # if switcher.get(case) == 'log':
     #     out = std.inverse_transform(input)
@@ -97,8 +86,7 @@ def data_inverse(input,case, norm, std):
     #     out = norm.inverse_transform(out)
     if switcher.get(case) == 'tan':
         # out = norm.inverse_transform(input)
-        out = (2*np.pi*np.arctan(input)+1)/2
+        out = (2 * np.pi * np.arctan(input_data) + 1) / 2
         out = norm.inverse_transform(out)
 
     return out
-

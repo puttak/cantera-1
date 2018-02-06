@@ -23,7 +23,7 @@ from keras import optimizers
 
 from res_block import res_block
 from reactor_ode_p import data_gen, ignite
-from tmp import data_scaling, data_inverse
+from data_scaling import data_scaling, data_inverse
 
 import cantera as ct
 
@@ -32,7 +32,7 @@ print("Running Cantera version: {}".format(ct.__version__))
 import pickle
 
 
-def dl_react(nns, temp, n_fuel, swt, ini=None):
+def dl_react(nns, temp, n_fuel, swt, ini):
     gas = ct.Solution('./data/Boivin_newTherm.cti')
     # gas = ct.Solution('./data/grimech12.cti')
 
@@ -48,9 +48,9 @@ def dl_react(nns, temp, n_fuel, swt, ini=None):
     train_org = []
     train_new = []
     # state_org = np.hstack([gas[gas.species_names].Y, gas.T]).reshape(1, -1)
-    state_org = np.hstack([gas[gas.species_names].X, gas.T]).reshape(1, -1)
-    if ini.any() != None:
-        state_org = ini
+    # state_org = np.hstack([gas[gas.species_names].X, gas.T]).reshape(1, -1)
+    # if ini.any() != None:
+    state_org = ini
 
     while t < t_end:
         train_org.append(state_org)
@@ -66,14 +66,31 @@ def dl_react(nns, temp, n_fuel, swt, ini=None):
             if acc[0, i] > swt and state_tmp[0, i] > 1e-4:
                 state_tmp[0, i] = state_std[0, i]
 
+        # H mass conservation
         # state_tmp[0, 0] = state_org[0, 0] + state_org[0, 1] + 1.0 / 17 * state_org[0, 3] \
         #                   + 2.0 / 18 * state_org[0, 5] + 1.0 / 33 * state_org[0, 6] + 2.0 / 34 * state_org[0, 7] \
         #                   - state_tmp[0, 1] - 1.0 / 17 * state_tmp[0, 3] \
         #                   - 2.0 / 18 * state_tmp[0, 5] - 1.0 / 33 * state_tmp[0, 6] - 2.0 / 34 * state_tmp[0, 7]
-        # state_tmp[0,0] = max(state_tmp[0,0],0)
+        # state_tmp[0, 0] = max(state_tmp[0, 0], 0)
+
+        # H mole conservation
+        if state_tmp[0, 0]>1e-2:
+            state_tmp[0, 0] = 2*state_org[0, 0] + 1*state_org[0, 1] + 1*state_org[0, 3] \
+                              + 2*state_org[0, 5] + 1*state_org[0, 6] + 2*state_org[0, 7] \
+                              - 1*state_tmp[0, 1] - 1*state_tmp[0, 3] \
+                              - 2*state_tmp[0, 5] - 1* state_tmp[0, 6] - 2* state_tmp[0, 7]
+
+            state_tmp[0, 0] = max(0.5 * state_tmp[0, 0], 0)
+
+        # O mole conservation
+        if state_tmp[0, 2]>1e-2:
+            state_tmp[0, 2] = 2*state_org[0, 2] + 1*state_org[0, 3] + 1* state_org[0, 4] \
+                              + 1* state_org[0, 5] + 2* state_org[0, 6] + 2 * state_org[0, 7] \
+                              - 1*state_tmp[0, 3] - 1 * state_tmp[0, 4] \
+                              - 1*state_tmp[0, 5] - 2* state_tmp[0, 6] - 2* state_tmp[0, 7]
+            state_tmp[0, 2] = max(0.5 * state_tmp[0, 2], 0)
 
         # state_new = np.hstack((state_tmp,[[dt]]))
-
         state_new = np.hstack((state_tmp[0, :-1], state_org[0, -3], state_tmp[0, -1], [dt])).reshape(1, -1)
 
         train_new.append(state_new)
@@ -97,8 +114,47 @@ def dl_react(nns, temp, n_fuel, swt, ini=None):
     return train_org, train_new
 
 
+def cut_plot(nns, n_fuel, sp, st_step, swt):
+    # for temp in [1001, 1101, 1201]:
+    for temp in [1201, 1501]:
+        start = st_step
+
+        # ode integration
+        ode_o, ode_n = ignite((temp, n_fuel, 'H2'))
+        ode_o = np.asarray(ode_o)
+        ode_n = np.asarray(ode_n)
+        ode_o = ode_o[ode_o[:, -1] == 1e-6]
+        ode_n = ode_n[ode_n[:, -1] == 1e-6]
+
+        ode_o = pd.DataFrame(data=ode_o,
+                             columns=nns[0].df_x_input.columns)
+        ode_n = pd.DataFrame(data=ode_n,
+                             columns=nns[0].df_x_input.columns)
+
+        ode_n = ode_n.drop('N2', axis=1)
+        ode_n = ode_n.drop('dt', axis=1)
+
+        dl_o, dl_n = dl_react(nns, temp, n_fuel, swt, ini=ode_o.values[start].reshape(1, -1))
+
+        plt.figure()
+
+        ode_show = ode_n[sp][start:].values
+        dl_show = dl_n[sp][:ode_show.size]
+
+        plt.semilogy(ode_show, 'kd', label='ode', ms=1)
+        plt.semilogy(dl_show, 'bd', label='dl', ms=1)
+        plt.legend()
+        plt.title('ini_t = ' + str(temp) + ': ' + sp)
+        plt.show()
+
+        # plt.figure()
+        # plt.plot(abs(dl_show[ode_show != 0] - ode_show[ode_show != 0]) / ode_show[ode_show != 0], 'kd', ms=1)
+
+    return dl_o, dl_n
+
+
 def cmp_plot(nns, n_fuel, sp, st_step, swt):
-    for temp in [1201]:
+    for temp in [1201,1501]:
         # for temp in [1001, 1101, 1201]:
         start = st_step
 
@@ -113,12 +169,6 @@ def cmp_plot(nns, n_fuel, sp, st_step, swt):
                              columns=nns[0].df_x_input.columns)
         ode_n = pd.DataFrame(data=ode_n,
                              columns=nns[0].df_x_input.columns)
-        # ode_n = pd.DataFrame(data=ode_n,
-        #                      columns=nns[0].df_y_target.columns)
-
-        # ode_o = np.delete(ode_o, 8, 1)
-        # ode_n = np.delete(ode_n, 8, 1)
-        # ode_n = np.delete(ode_n, 9, 1)
 
         # ode_o = ode_o.drop('N2', axis=1)
         ode_n = ode_n.drop('N2', axis=1)
@@ -150,13 +200,31 @@ def cmp_plot(nns, n_fuel, sp, st_step, swt):
                     state_new[0, i] = state_std[0, i]
                     # if abs((state_log[0, i] - state_std[0, i]) / state_log[0, i]) > 1e-2:
                     #     state_new[0, i] = state_std[0, i]+state_log[0,i]
+            # H mass conservation
             # state_new[0, 0] = input[0, 0] + input[0, 1] + 1.0 / 17 * input[0, 3] \
             #               + 2.0 / 18 * input[0, 5] + 1.0 / 33 * input[0, 6] + 2.0 / 34 * input[0, 7] \
             #               - state_new[0, 1] - 1.0 / 17 * state_new[0, 3] \
             #               - 2.0 / 18 * state_new[0, 5] - 1.0 / 33 * state_new[0, 6] - 2.0 / 34 * state_new[0, 7]
-            # state_new[0,0] = max(state_new[0,0],0)
+            # state_new[0, 0] = max(state_new[0, 0], 0)
+
+            # H mole conservation
+            if state_new[0, 0]>2e-2:
+                state_new[0, 0] = 2*input[0, 0] + 1*input[0, 1] + 1* input[0, 3] \
+                              + 2* input[0, 5] + 1* input[0, 6] + 2 * input[0, 7] \
+                              - 1*state_new[0, 1] - 1 * state_new[0, 3] \
+                              - 2*state_new[0, 5] - 1* state_new[0, 6] - 2* state_new[0, 7]
+                state_new[0, 0] = max(0.5 * state_new[0, 0], 0)
+
+            # O mole conservation
+            if state_new[0, 2]>2e-2:
+                state_new[0, 2] = 2*input[0, 2] + 1*input[0, 3] + 1* input[0, 4] \
+                              + 1* input[0, 5] + 2* input[0, 6] + 2 * input[0, 7] \
+                              - 1*state_new[0, 3] - 1 * state_new[0, 4] \
+                              - 1*state_new[0, 5] - 2* state_new[0, 6] - 2* state_new[0, 7]
+                state_new[0, 2] = max(0.5 * state_new[0, 2], 0)
 
             cmpr.append(state_new)
+
         cmpr = np.concatenate(cmpr, axis=0)
         cmpr = pd.DataFrame(data=cmpr,
                             columns=nns[0].df_y_target.columns)
@@ -180,55 +248,21 @@ def cmp_plot(nns, n_fuel, sp, st_step, swt):
 
         plt.figure()
         plt.plot(abs(cmpr_show - ode_show) / ode_show, 'kd', ms=1)
-
-        plt.figure()
-        plt.plot(abs(np.log(cmpr_show) - np.log(ode_show)) / np.log(ode_show), 'kd', ms=1)
+        plt.show()
+        # plt.figure()
+        # plt.plot(abs(np.log(cmpr_show) - np.log(ode_show)) / np.log(ode_show), 'kd', ms=1)
 
         plt.figure()
         plt.plot(ode_show, 'kd', label='ode', ms=1)
         plt.plot(cmpr_show, 'rd', label='cmpr_s', ms=1)
         plt.legend()
         plt.title('ini_t = ' + str(temp) + ': ' + sp)
+        plt.show()
 
     return cmpr, ode_o, ode_n
 
 
-def cut_plot(nns, n_fuel, sp, st_step, swt):
-    # for temp in [1001, 1101, 1201]:
-    for temp in [1201, 1501, 2001]:
-        start = st_step
 
-        # ode integration
-        ode_o, ode_n = ignite((temp, n_fuel, 'H2'))
-        ode_o = np.asarray(ode_o)
-        ode_n = np.asarray(ode_n)
-        ode_o = ode_o[ode_o[:, -1] == 1e-6]
-        ode_n = ode_n[ode_n[:, -1] == 1e-6]
-
-        ode_o = pd.DataFrame(data=ode_o,
-                             columns=nns[0].df_x_input.columns)
-        ode_n = pd.DataFrame(data=ode_n,
-                             columns=nns[0].df_x_input.columns)
-
-        ode_n = ode_n.drop('N2', axis=1)
-        ode_n = ode_n.drop('dt', axis=1)
-
-        dl_o, dl_n = dl_react(nns, temp, n_fuel, swt, ini=ode_o.values[start].reshape(1, -1))
-
-        plt.figure()
-
-        ode_show = ode_n[sp][start:].values
-        dl_show = dl_n[sp][:ode_show.size]
-
-        plt.semilogy(ode_show, 'kd', label='ode', ms=1)
-        plt.semilogy(dl_show, 'bd', label='dl', ms=1)
-        plt.legend()
-        plt.title('ini_t = ' + str(temp) + ': ' + sp)
-
-        # plt.figure()
-        # plt.plot(abs(dl_show[ode_show != 0] - ode_show[ode_show != 0]) / ode_show[ode_show != 0], 'kd', ms=1)
-
-    return dl_o, dl_n
 
 
 class classScaler(object):
@@ -261,16 +295,16 @@ class cluster(object):
 
 
 class combustionML(object):
-    # def __init__(self, df_x_input, df_y_target, x_train, x_test, y_train, y_test):
-    def __init__(self, df_x_input, df_y_target, scaler_case):
+
+    def __init__(self, df_x_input, df_y_target, scaling_case):
         x_train, x_test, y_train, y_test = model_selection.train_test_split(df_x_input, df_y_target,
                                                                             test_size=0.1,
                                                                             random_state=42)
-        self.x_train, self.norm_x, self.std_x = data_scaling(x_train, scaler_case)
-        self.y_train, self.norm_y, self.std_y = data_scaling(y_train, scaler_case)
-        x_test, _, _ = data_scaling(x_test, scaler_case, self.norm_x, self.std_x)
+        self.x_train, self.norm_x, self.std_x = data_scaling(x_train, scaling_case)
+        self.y_train, self.norm_y, self.std_y = data_scaling(y_train, scaling_case)
+        x_test, _, _ = data_scaling(x_test, scaling_case, self.norm_x, self.std_x)
 
-        self.scaler_case = scaler_case
+        self.scaling_case = scaling_case
         self.df_x_input = df_x_input
         self.df_y_target = df_y_target
         self.x_test = pd.DataFrame(data=x_test, columns=df_x_input.columns)
@@ -320,9 +354,7 @@ class combustionML(object):
                                      period=5)
         self.callbacks_list = [checkpoint]
 
-    # fit the model
     def fitModel(self, batch_size=1024, epochs=400, vsplit=0.3):
-
         self.vsplit = vsplit
         self.history = self.model.fit(
             self.x_train, self.y_train,
@@ -338,7 +370,7 @@ class combustionML(object):
         self.model.load_weights("./tmp/weights.best.cntk.hdf5")
 
         predict = self.model.predict(self.x_test.values)
-        predict = data_inverse(predict, self.scaler_case, self.norm_y, self.std_y)
+        predict = data_inverse(predict, self.scaling_case, self.norm_y, self.std_y)
         self.predict = pd.DataFrame(data=predict, columns=self.df_y_target.columns)
 
         R2_score = -abs(metrics.r2_score(predict, self.y_test))
@@ -346,11 +378,10 @@ class combustionML(object):
         return R2_score
 
     def inference(self, x):
-
-        tmp, _, _ = data_scaling(x, self.scaler_case, self.norm_x, self.std_x)
+        tmp, _, _ = data_scaling(x, self.scaling_case, self.norm_x, self.std_x)
         predict = self.model.predict(tmp)
         # inverse for out put
-        out = data_inverse(predict, self.scaler_case, self.norm_y, self.std_y)
+        out = data_inverse(predict, self.scaling_case, self.norm_y, self.std_y)
         # eliminate negative values
         out[out < 0] = 0
         # normalized total mass fraction to 1
@@ -364,7 +395,7 @@ class combustionML(object):
 
         return out
 
-    def acc_plt(self, sp):
+    def plt_acc(self, sp):
         plt.figure()
         plt.plot(self.y_test[sp], self.predict[sp], 'kd', ms=1)
         plt.axis('tight')
@@ -373,10 +404,10 @@ class combustionML(object):
         # plt.axis([train_new[sp].min(), train_new[sp].max(), train_new[sp].min(), train_new[sp].max()], 'tight')
         r2 = round(metrics.r2_score(self.y_test[sp], self.predict[sp]), 6)
         plt.title(sp + ' : r2 = ' + str(r2))
+        plt.show()
 
     # loss
     def plt_loss(self):
-        # fig = plt.figure()
         plt.semilogy(self.history.history['loss'])
         if self.vsplit:
             plt.semilogy(self.history.history['val_loss'])
@@ -384,6 +415,7 @@ class combustionML(object):
         plt.ylabel('loss')
         plt.xlabel('epoch')
         plt.legend(['train', 'test'], loc='upper right')
+        plt.show()
 
     def run(self, hyper):
         print(hyper)
@@ -395,13 +427,14 @@ class combustionML(object):
 
 
 if __name__ == "__main__":
-    T = np.linspace(1201, 1501, 4)
+    T = np.linspace(1001, 1501, 8)
     n = np.linspace(8, 0., 10)
     XX, YY = np.meshgrid(T, n)
     ini = np.concatenate((XX.reshape(-1, 1), YY.reshape(-1, 1)), axis=1)
 
     # generate data
     df_x_input, df_y_target = data_gen(ini, 'H2')
+
     # drop inert N2
     # df_x_input = df_x_input.drop('N2', axis=1)
     df_y_target = df_y_target.drop('N2', axis=1)
@@ -412,7 +445,7 @@ if __name__ == "__main__":
     r2s = []
 
     # nn_std = combustionML(df_x_input[df_y_target['H']>1e-6], df_y_target[df_y_target['H']>1e-6], 'std')
-    nn_std = combustionML(df_x_input, df_y_target, 'tan')
+    nn_std = combustionML(df_x_input, df_y_target, 'std')
     r2 = nn_std.run([600, 2, 0.])
     r2s.append(r2)
     nns.append(nn_std)
