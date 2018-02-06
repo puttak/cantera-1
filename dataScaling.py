@@ -29,7 +29,7 @@ class dataScaling(object):
             out = self.norm.fit_transform(input_data)
 
         if self.switcher.get(self.case) == 'log':
-            out = np.log(np.asarray(input_data) + 1e-20)
+            out = np.log(np.asarray(input_data) + 1e-16)
             self.norm = MinMaxScaler()
             self.std = StandardScaler()
             out = self.norm.fit_transform(out)
@@ -37,7 +37,8 @@ class dataScaling(object):
         if self.switcher.get(self.case) == 'tan':
             self.norm = MinMaxScaler()
             self.std = StandardScaler()
-            out = self.norm.fit_transform(input_data)
+            out = self.std.fit_transform(input_data)
+            out = self.norm.fit_transform(out)
             out = np.tan((2 * np.asarray(out) - 1) / (2 * np.pi + 1e-20))
 
         return out
@@ -51,10 +52,11 @@ class dataScaling(object):
             out = self.norm.transform(input_data)
 
         if self.switcher.get(self.case) == 'log':
-            out = np.log(np.asarray(input_data) + 1e-20)
+            out = np.log(np.asarray(input_data) + 1e-16)
             out = self.norm.transform(out)
         if self.switcher.get(self.case) == 'tan':
-            out = self.norm.transform(input_data)
+            out = self.std.transform(input_data)
+            out = self.norm.transform(out)
             out = np.tan((2 * np.asarray(out) - 1) / (2 * np.pi + 1e-20))
 
         return out
@@ -70,10 +72,11 @@ class dataScaling(object):
 
         if self.switcher.get(self.case) == 'log':
             out = self.norm.inverse_transform(input_data)
-            out = np.exp(out)
+            out = np.exp(out) - 1e-16
 
         if self.switcher.get(self.case) == 'tan':
             out = (2 * np.pi * np.arctan(input_data) + 1) / 2
             out = self.norm.inverse_transform(out)
+            out = self.std.inverse_transform(out)
 
         return out

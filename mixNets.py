@@ -34,7 +34,8 @@ import pickle
 
 
 def dl_react(nns, temp, n_fuel, swt, ini):
-    gas = ct.Solution('./data/Boivin_newTherm.cti')
+    # gas = ct.Solution('./data/Boivin_newTherm.cti')
+    gas = ct.Solution('./data/h2_sandiego.cti')
     # gas = ct.Solution('./data/grimech12.cti')
 
     fuel = 'H2'
@@ -61,7 +62,7 @@ def dl_react(nns, temp, n_fuel, swt, ini):
         state_log = nns[1].inference(state_org)
 
         state_tmp = state_log
-        acc, _, _ = data_scaling(state_tmp, nns[1].scaler_case, nns[1].norm_y, nns[1].std_y)
+        acc = nns[1].y_scaling.transform(state_tmp)
         for i in range(9):
             # if state_log[0, i] > swt:
             if acc[0, i] > swt and state_tmp[0, i] > 1e-4:
@@ -142,8 +143,10 @@ def cut_plot(nns, n_fuel, sp, st_step, swt):
         ode_show = ode_n[sp][start:].values
         dl_show = dl_n[sp][:ode_show.size]
 
-        plt.semilogy(ode_show, 'kd', label='ode', ms=1)
-        plt.semilogy(dl_show, 'bd', label='dl', ms=1)
+        # plt.semilogy(ode_show, 'kd', label='ode', ms=1)
+        # plt.semilogy(dl_show, 'bd', label='dl', ms=1)
+        plt.plot(ode_show, 'kd', label='ode', ms=1)
+        plt.plot(dl_show, 'bd', label='dl', ms=1)
         plt.legend()
         plt.title('ini_t = ' + str(temp) + ': ' + sp)
         plt.show()
@@ -240,12 +243,14 @@ def cmp_plot(nns, n_fuel, sp, st_step, swt):
         plt.legend()
         plt.title('ini_t = ' + str(temp) + ': ' + sp)
 
-        # if swt * (1 - swt) == 0:
-        #     a, _, _ = data_scaling(cmpr, nns[swt].scaler_case, nns[swt].norm_y, nns[swt].std_y)
-        #     a = pd.DataFrame(data=a,
-        #                      columns=nns[swt].df_y_target.columns)
-        #     plt.figure()
-        #     plt.plot(a[sp][start:].values)
+        if swt * (1 - swt) == 0:
+            # a = nns[swt].y_scaling.transform(cmpr)
+            a = nns[swt].x_scaling.transform(ode_o)
+            a = pd.DataFrame(data=a,
+                             columns=nns[swt].df_x_input.columns)
+            plt.figure()
+            plt.plot(a[sp][start:].values)
+            plt.show()
 
         plt.figure()
         plt.plot(abs(cmpr_show - ode_show) / ode_show, 'kd', ms=1)
@@ -444,14 +449,14 @@ class combustionML(object):
         print(hyper)
 
         self.composeResnetModel(n_neurons=hyper[0], blocks=hyper[1], drop1=hyper[2])
-        self.fitModel(epochs=10, batch_size=1024 * 8)
+        self.fitModel(epochs=300, batch_size=1024 * 8)
 
         return self.prediction()
 
 
 if __name__ == "__main__":
-    T = np.linspace(1001, 1501, 8)
-    n = np.linspace(8, 0., 10)
+    T = np.linspace(1001, 2001, 20)
+    n = np.linspace(8, 0., 20)
     XX, YY = np.meshgrid(T, n)
     ini = np.concatenate((XX.reshape(-1, 1), YY.reshape(-1, 1)), axis=1)
 
@@ -468,7 +473,7 @@ if __name__ == "__main__":
     r2s = []
 
     # nn_std = combustionML(df_x_input[df_y_target['H']>1e-6], df_y_target[df_y_target['H']>1e-6], 'std')
-    nn_std = combustionML(df_x_input, df_y_target, 'tan')
+    nn_std = combustionML(df_x_input, df_y_target, 'std')
     r2 = nn_std.run([600, 2, 0.])
     r2s.append(r2)
     nns.append(nn_std)
