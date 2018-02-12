@@ -46,7 +46,7 @@ def ignite(ini):
     fuel = ini[2]
 
     t_end = 1e-3
-    for dt in[1e-6, 5e-7, 1.5e-6]:
+    for dt in[1e-6, 5e-7]:
         if fuel == 'H2':
             # gas = ct.Solution('./data/Boivin_newTherm.cti')
             gas = ct.Solution('./data/h2_sandiego.cti')
@@ -66,13 +66,19 @@ def ignite(ini):
 
         while solver.successful() and solver.t < t_end:
             # state_org = np.hstack([gas[gas.species_names].Y, gas.T, dt])
-            state_org = np.hstack([gas[gas.species_names].X, gas.T, dt])
+            tmp = gas.T
+            state_org = np.hstack([gas[gas.species_names].X, gas.T, tmp, dt])
+            # state_org = np.hstack([gas[gas.species_names].X, gas.T,
+            #                        np.dot(gas.partial_molar_enthalpies,gas.X)/gas.density, dt])
 
             solver.integrate(solver.t + dt)
             # gas.TPY = solver.y[0], P, solver.y[1:]
             gas.TPX = solver.y[0], P, solver.y[1:]
+
             # Extract the state of the reactor
-            state_new = np.hstack([gas[gas.species_names].X, gas.T, dt])
+            state_new = np.hstack([gas[gas.species_names].X, gas.T, gas.T-tmp, dt])
+            # state_new = np.hstack([gas[gas.species_names].X, gas.T,
+            #                        np.dot(gas.partial_molar_enthalpies, gas.X)/gas.density, dt])
             # state_new = np.hstack([gas[gas.species_names].Y])
             state_res = state_new - state_org
             res = abs(state_res[state_org!=0]/state_org[state_org!=0])
@@ -116,6 +122,7 @@ def data_gen(ini_Tn, fuel):
 
     columnNames = gas.species_names
     columnNames = columnNames + ['T']
+    columnNames = columnNames + ['dT']
     columnNames = columnNames+['dt']
 
     train_org = pd.DataFrame(data=org, columns=columnNames)
@@ -128,7 +135,7 @@ def data_gen(ini_Tn, fuel):
 
 
 if __name__ == "__main__":
-    ini_T = np.linspace(1201, 1501, 4)
+    ini_T = np.linspace(1201, 1501, 1)
     ini = [(temp, 2) for temp in ini_T]
     ini = ini + [(temp, 1) for temp in ini_T]
     a, b = data_gen(ini, 'H2')
