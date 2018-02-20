@@ -22,10 +22,9 @@ from keras.callbacks import ModelCheckpoint
 from keras import optimizers
 
 from res_block import res_block
-from reactor_ode_p import data_gen, ignite
-# from data_scaling import data_scaling, data_inverse
+from reactor_ode_delta import data_gen, ignite, ignite_post
 from dataScaling import dataScaling
-
+from flameMasterTest import fm_data_gen
 import cantera as ct
 
 print("Running Cantera version: {}".format(ct.__version__))
@@ -56,7 +55,7 @@ def dl_react(nns, temp, n_fuel, swt, ini):
 
     while t < t_end:
         train_org.append(state_org)
-        print(state_org)
+
         # inference
         state_std = nns[0].inference(state_org)
         state_log = nns[1].inference(state_org)
@@ -76,7 +75,7 @@ def dl_react(nns, temp, n_fuel, swt, ini):
         # state_tmp[0, 0] = max(state_tmp[0, 0], 0)
 
         # H mole conservation
-        if state_tmp[0, 0]>1e-1:
+        if state_tmp[0, 0]>1e-2:
             state_tmp[0, 0] = 2*state_org[0, 0] + 1*state_org[0, 1] + 1*state_org[0, 3] \
                               + 2*state_org[0, 5] + 1*state_org[0, 6] + 2*state_org[0, 7] \
                               - 1*state_tmp[0, 1] - 1*state_tmp[0, 3] \
@@ -85,17 +84,19 @@ def dl_react(nns, temp, n_fuel, swt, ini):
             state_tmp[0, 0] = max(0.5 * state_tmp[0, 0], 0)
 
         # O mole conservation
-        if state_tmp[0, 2]>1e-1:
+        if state_tmp[0, 2]>1e-2:
             state_tmp[0, 2] = 2*state_org[0, 2] + 1*state_org[0, 3] + 1* state_org[0, 4] \
                               + 1* state_org[0, 5] + 2* state_org[0, 6] + 2 * state_org[0, 7] \
                               - 1*state_tmp[0, 3] - 1 * state_tmp[0, 4] \
                               - 1*state_tmp[0, 5] - 2* state_tmp[0, 6] - 2* state_tmp[0, 7]
             state_tmp[0, 2] = max(0.5 * state_tmp[0, 2], 0)
 
-        # state_new = np.hstack((state_tmp,[[dt]]))
+        state_new = np.hstack((state_tmp,[[dt]]))
         # state_new = np.hstack((state_tmp[0, :-1], state_org[0, -3], state_tmp[0, -1], [dt])).reshape(1, -1)
-        state_new = np.hstack((state_tmp[0, :-1], [dt])).reshape(1, -1)
-        state_new[0,-2]=state_org[0,-2]+state_tmp[0,-1]
+
+        # state_new = np.hstack((state_tmp[0, :-1], [dt])).reshape(1, -1)
+        # state_new[0,-2]=state_org[0,-2]+state_tmp[0,-1]
+        # state_new[0,:-1] = state_org[0,:-1] + state_new[0,:-1]
 
         train_new.append(state_new)
 
@@ -125,7 +126,7 @@ def cut_plot(x_columns, nns, n_fuel, sp, st_step, swt):
         start = st_step
 
         # ode integration
-        ode_o, ode_n = ignite((temp, n_fuel, 'H2'))
+        ode_o, ode_n = ignite_post((temp, n_fuel, 'H2'))
         ode_o = np.asarray(ode_o)
         ode_n = np.asarray(ode_n)
         ode_o = ode_o[ode_o[:, -1] == 1e-6]
@@ -137,8 +138,9 @@ def cut_plot(x_columns, nns, n_fuel, sp, st_step, swt):
                              columns=columns_ini)
 
         ode_o = ode_o.drop('N2', axis=1)
-        ode_o = ode_o.drop('dT', axis=1)
+        #ode_o = ode_o.drop('dT', axis=1)
         ode_n = ode_n.drop('N2', axis=1)
+        # ode_n = ode_o + ode_n
         ode_n = ode_n.drop('dt', axis=1)
 
         dl_o, dl_n = dl_react(nns, temp, n_fuel, swt, ini=ode_o.values[start].reshape(1, -1))
@@ -156,10 +158,14 @@ def cut_plot(x_columns, nns, n_fuel, sp, st_step, swt):
         plt.title('ini_t = ' + str(temp) + ': ' + sp)
         plt.show()
 
+        plt.figure()
+        plt.plot(abs(dl_show - ode_show) / ode_show, 'kd', ms=1)
+        plt.show()
+
         # plt.figure()
         # plt.plot(abs(dl_show[ode_show != 0] - ode_show[ode_show != 0]) / ode_show[ode_show != 0], 'kd', ms=1)
 
-    return dl_o, dl_n
+    # return dl_o, dl_n
 
 
 def cmp_plot(columns_ini, nns, n_fuel, sp, st_step, swt):
@@ -168,12 +174,13 @@ def cmp_plot(columns_ini, nns, n_fuel, sp, st_step, swt):
         start = st_step
 
         # ode integration
-        ode_o, ode_n = ignite((temp, n_fuel, 'H2'))
+        ode_o, ode_n = ignite_post((temp, n_fuel, 'H2'))
         ode_o = np.asarray(ode_o)
         ode_n = np.asarray(ode_n)
         ode_o = ode_o[ode_o[:, -1] == 1e-6]
         ode_n = ode_n[ode_n[:, -1] == 1e-6]
 
+        print(ode_n)
         # columns_ini = nns[0].df_x_input.columns.drop(['H_sbr_O'])
         # columns_ini = nns[0].df_x_input.columns
 
@@ -185,9 +192,10 @@ def cmp_plot(columns_ini, nns, n_fuel, sp, st_step, swt):
         # ode_o = ode_o.assign(H_sbr_O=ode_o['H'] - ode_o['O'])
         # ode_o = ode_o.assign(H_add_O=ode_o['H'] + ode_o['O'])
         ode_o = ode_o.drop('N2', axis=1)
-        ode_o = ode_o.drop('dT', axis=1)
+        # ode_o = ode_o.drop('dT', axis=1)
 
         ode_n = ode_n.drop('N2', axis=1)
+        # ode_n = ode_n + ode_o
         ode_n = ode_n.drop('dt', axis=1)
         # ode_n = ode_n.drop('T', axis=1)
 
@@ -195,9 +203,8 @@ def cmp_plot(columns_ini, nns, n_fuel, sp, st_step, swt):
         for input_data in ode_o.values:
 
             input_data = input_data.reshape(1, -1)
-            # print(input_data)
+
             # inference
-            # print(input)
             state_std = nns[0].inference(input_data)
             # state_std[state_std<1e-4] = 0
 
@@ -241,8 +248,10 @@ def cmp_plot(columns_ini, nns, n_fuel, sp, st_step, swt):
                               - 1*state_new[0, 5] - 2* state_new[0, 6] - 2* state_new[0, 7]
                 state_new[0, 2] = max(0.5 * state_new[0, 2], 0)
 
-            state_new[0,-1]=input_data[0,-2]+state_new[0,-1]
+            # state_new[0,-1]=input_data[0,-2]+state_new[0,-1]
+            # state_new[0,:]=input_data[0,:-1]+state_new[0,:]
             cmpr.append(state_new)
+
 
         cmpr = np.concatenate(cmpr, axis=0)
         cmpr = pd.DataFrame(data=cmpr,
@@ -472,43 +481,56 @@ class combustionML(object):
         print(hyper)
 
         self.composeResnetModel(n_neurons=hyper[0], blocks=hyper[1], drop1=hyper[2])
-        self.fitModel(epochs=1000, batch_size=1024 * 8)
+        self.fitModel(epochs=400, batch_size=1024 * 8)
 
         return self.prediction()
 
 
 if __name__ == "__main__":
-    # T = np.linspace(1001, 2001, 10)
-    # n = np.linspace(8, 0.4, 10)
     T = np.random.rand(20)*1000 + 1001
-    n = np.random.rand(20)*7.6+0.4
+    n_s = np.random.rand(20) * 7.6 + 0.4
+    n_l = np.random.rand(20) * 800
+    # n = np.random.randint(10000, size=2000)
+    n = np.concatenate((n_s, n_l))
     XX, YY = np.meshgrid(T, n)
     ini = np.concatenate((XX.reshape(-1, 1), YY.reshape(-1, 1)), axis=1)
 
     # generate data
     df_x_input, df_y_target = data_gen(ini, 'H2')
+    # df_x_input, df_y_target = fm_data_gen()
+    fm_x, fm_y = fm_data_gen()
+    df_x_input.append(fm_x)
+    df_y_target.append(fm_y)
     x_columns = df_x_input.columns
 
     # df_x_input = df_x_input.assign(H_sbr_O=df_x_input['H'] - df_x_input['O'])
     # df_x_input = df_x_input.assign(H_add_O=df_x_input['H'] + df_x_input['O'])
     # drop inert N2
     df_x_input = df_x_input.drop('N2', axis=1)
-    df_x_input = df_x_input.drop('dT', axis=1)
+    # df_x_input = df_x_input.drop('dT', axis=1)
     df_y_target = df_y_target.drop('N2', axis=1)
     df_y_target = df_y_target.drop('dt', axis=1)
     # df_y_target = df_y_target.drop('T', axis=1)
 
-    rand_sp = np.random.choice(df_x_input.index.values,100000)
-    #a = df_x_input.sample(100000)
-    #b = df_y_target.sample(100000)
-    df_x_input = df_x_input.loc[rand_sp]
-    df_y_target = df_y_target.loc[rand_sp]
-    # create two nets
+    # df_x_std = df_x_input[df_y_target['H'] > 0.005]
+    # df_y_std = df_y_target[df_y_target['H'] > 0.005]
+    df_x_std = df_x_input
+    df_y_std = df_y_target
+
+    # rand_sp = np.random.choice(df_x_input.index.values,200000)
+    rand_sp = np.random.choice(df_x_std.index.values,1000000)
+    # df_x_input = df_x_input.loc[rand_sp]
+    # df_y_target = df_y_target.loc[rand_sp]
+    df_x_std = df_x_std.loc[rand_sp]
+    df_y_std = df_y_std.loc[rand_sp]
+
+    # # create two nets
     nns = []
     r2s = []
 
     # nn_std = combustionML(df_x_input[df_y_target['H']>1e-6], df_y_target[df_y_target['H']>1e-6], 'std')
-    nn_std = combustionML(df_x_input, df_y_target, 'std')
+    # nn_std = combustionML(df_x_input, df_y_target, 'std')
+    nn_std = combustionML(df_x_std, df_y_std, 'std')
     r2 = nn_std.run([200, 2, 0.5])
     r2s.append(r2)
     nns.append(nn_std)
@@ -516,7 +538,7 @@ if __name__ == "__main__":
 
 
     # nn_log = combustionML(df_x_input[df_y_target['H'] < 1e-6], df_y_target[df_y_target['H'] < 1e-6], 'log')
-    nn_log = combustionML(df_x_input, df_y_target, 'log2')
+    nn_log = combustionML(df_x_std, df_y_std, 'log')
     r2 = nn_log.run([200, 2, 0.])
     r2s.append(r2)
     nns.append(nn_log)
