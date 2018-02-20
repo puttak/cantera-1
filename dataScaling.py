@@ -33,7 +33,7 @@ class dataScaling(object):
             out = self.norm.fit_transform(input_data)
 
         if self.switcher.get(self.case) == 'log':
-            out = np.log(np.asarray(input_data) + 1e-20)
+            out = - np.log(np.asarray(input_data/100) + 1e-20)
             self.norm = MinMaxScaler()
             self.std = StandardScaler()
             out = self.norm.fit_transform(out)
@@ -65,7 +65,7 @@ class dataScaling(object):
             out = self.norm.transform(input_data)
 
         if self.switcher.get(self.case) == 'log':
-            out = np.log(np.asarray(input_data) + 1e-20)
+            out = - np.log(np.asarray(input_data/100) + 1e-20)
             out = self.norm.transform(out)
         if self.switcher.get(self.case) == 'log2':
             out = self.norm.transform(input_data)
@@ -92,7 +92,7 @@ class dataScaling(object):
 
         if self.switcher.get(self.case) == 'log':
             out = self.norm.inverse_transform(input_data)
-            out = np.exp(out) - 1e-20
+            out = (np.exp(-out) - 1e-20)*100
         if self.switcher.get(self.case) == 'log2':
             out = self.norm_1.inverse_transform(input_data)
             out = np.exp(out) - 1e-20

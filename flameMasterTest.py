@@ -37,7 +37,6 @@ class ReactorOde(object):
 
         return np.hstack((dTdt, dYdt))
 
-
 def one_step(ini):
     train_org = []
     train_new = []
@@ -86,6 +85,55 @@ def one_step(ini):
     return train_org, train_new
 
 
+def one_step_pro(ini):
+    train_org = []
+    train_new = []
+
+    temp = ini[0]
+    Y_ini = ini[1]
+    fuel = ini[2]
+
+    dt = 1e-6
+
+    if fuel == 'H2':
+        # gas = ct.Solution('./data/Boivin_newTherm.cti')
+        gas = ct.Solution('./data/h2_sandiego.cti')
+    if fuel == 'CH4':
+        gas = ct.Solution('./data/grimech12.cti')
+        # gas = ct.Solution('gri30.xml')
+    P = ct.one_atm
+
+    # gas.TPX = temp, P, fuel + ':' + str(n_fuel) + ',O2:1,N2:4'
+    for temp_org,Y_org in zip(temp,Y_ini):
+        gas.TP = temp_org, P
+        gas.Y=Y_org
+
+        # y0 = np.hstack((gas.T, gas.Y))
+        x0 = np.hstack((gas.T, gas.X))
+        ode = ReactorOde(gas)
+        solver = scipy.integrate.ode(ode)
+        solver.set_integrator('vode', method='bdf', with_jacobian=True)
+        # solver.set_initial_value(y0, 0.0)
+        solver.set_initial_value(x0, 0.0)
+
+        # state_org = np.hstack([gas[gas.species_names].Y, gas.T])
+        state_org = np.hstack([gas[gas.species_names].X, gas.T, dt])
+
+        solver.integrate(solver.t + dt)
+        # gas.TPY = solver.y[0], P, solver.y[1:]
+        gas.TPX = solver.y[0], P, solver.y[1:]
+
+        # Extract the state of the reactor
+        state_new = np.hstack([gas[gas.species_names].X, gas.T, dt])
+
+        # state_new = np.hstack([gas[gas.species_names].Y, gas.T])
+
+        # Update the sample
+        train_org.append(state_org)
+        train_new.append(state_new)
+
+    return train_org, train_new
+
 def data_gen(ini_Tn, fuel):
     gas = ct.Solution('./data/h2_sandiego.cti')
 
@@ -93,9 +141,10 @@ def data_gen(ini_Tn, fuel):
     t_start = time.time()
     p = mp.Pool(processes=mp.cpu_count())
 
+
     ini = [(x[0], x[1], fuel) for x in ini_Tn]
     # training_data = p.map(ignite_random_x, ini)
-    training_data = p.map(one_step, ini)
+    training_data = p.map(one_step_pro, ini)
     p.close()
 
     org, new = zip(*training_data)
@@ -140,7 +189,10 @@ def fm_data_gen():
     Y_sp = df[gas.species_names]
     T = df['temperature[[K]']
 
-    ini=[ (a,b) for a,b in zip(T,Y_sp.values)]
+    #ini=[ (a,b) for a,b in zip(T,Y_sp.values)]
+    ini = [(a, b) for a, b in zip(np.array_split(T,mp.cpu_count()),
+                                  np.array_split(Y_sp.values,mp.cpu_count()))]
+
     train_org, train_new = data_gen(ini, 'H2')
     return train_org, train_new
 
@@ -173,5 +225,6 @@ if __name__ == '__main__':
     Y_sp = df[gas.species_names]
     T = df['temperature[[K]']
 
-    ini=[ (a,b) for a,b in zip(T,Y_sp.values)]
-    a, b = data_gen(ini, 'H2')
+    ini = [(a, b) for a, b in zip(T, Y_sp.values)]
+    ini_pro = [(a, b) for a, b in zip(np.array_split(T,4), np.array_split(Y_sp.values,4))]
+    a, b = data_gen(ini_pro, 'H2')

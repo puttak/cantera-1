@@ -61,10 +61,12 @@ def dl_react(nns, temp, n_fuel, swt, ini):
         state_log = nns[1].inference(state_org)
 
         state_tmp = state_log
-        acc = nns[1].y_scaling.transform(state_tmp)
-        for i in range(acc.shape[1]-1):
+        acc_std = nns[0].y_scaling.transform(state_tmp)
+        acc_log = nns[1].y_scaling.transform(state_tmp)
+        for i in range(acc_std.shape[1]-1):
             # if state_log[0, i] > swt:
-            if acc[0, i] > swt and state_tmp[0, i] > 1e-4:
+            #if acc[0, i] > swt and state_tmp[0, i] > 1e-4:
+            if acc_std[0, i] > 0:
                 state_tmp[0, i] = state_std[0, i]
 
         # H mass conservation
@@ -180,7 +182,7 @@ def cmp_plot(columns_ini, nns, n_fuel, sp, st_step, swt):
         ode_o = ode_o[ode_o[:, -1] == 1e-6]
         ode_n = ode_n[ode_n[:, -1] == 1e-6]
 
-        print(ode_n)
+
         # columns_ini = nns[0].df_x_input.columns.drop(['H_sbr_O'])
         # columns_ini = nns[0].df_x_input.columns
 
@@ -212,13 +214,16 @@ def cmp_plot(columns_ini, nns, n_fuel, sp, st_step, swt):
             # state_log[state_log>=1e-4] = 0
 
             state_new = state_log
-            # print(state_new)
-            acc = nns[1].x_scaling.transform(input_data)
+
+            acc_std = nns[0].x_scaling.transform(input_data)
+            acc_log = nns[1].x_scaling.transform(input_data)
+
             # print(input_data.shape[1])
             for i in range(state_new.shape[1]):
                 # print(i)
                 # print(state_log)
-                if acc[0, i] > swt:
+                #if acc_log[0, i] > swt:
+                if acc_std[0, i] > 0:
                     # if state_new[0, i] > swt:
                     # if acc[0, i] > swt or state_new[0,i]>1e-4:
                     # print(acc[0,i])
@@ -233,7 +238,7 @@ def cmp_plot(columns_ini, nns, n_fuel, sp, st_step, swt):
             # state_new[0, 0] = max(state_new[0, 0], 0)
 
             # H mole conservation
-            if state_new[0, 0]>2e-2:
+            if state_new[0, 0]>1e-2:
                 state_new[0, 0] = 2*input_data[0, 0] + 1*input_data[0, 1] + 1* input_data[0, 3] \
                               + 2* input_data[0, 5] + 1* input_data[0, 6] + 2 * input_data[0, 7] \
                               - 1*state_new[0, 1] - 1 * state_new[0, 3] \
@@ -241,7 +246,7 @@ def cmp_plot(columns_ini, nns, n_fuel, sp, st_step, swt):
                 state_new[0, 0] = max(0.5 * state_new[0, 0], 0)
 
             # O mole conservation
-            if state_new[0, 2]>2e-2:
+            if state_new[0, 2]>1e-2:
                 state_new[0, 2] = 2*input_data[0, 2] + 1*input_data[0, 3] + 1* input_data[0, 4] \
                               + 1* input_data[0, 5] + 2* input_data[0, 6] + 2 * input_data[0, 7] \
                               - 1*state_new[0, 3] - 1 * state_new[0, 4] \
@@ -441,8 +446,8 @@ class combustionML(object):
 
         plt.figure()
         plt.plot(self.y_test[sp], self.predict[sp], 'kd', ms=1)
-        plt.axis('tight')
-        plt.axis('equal')
+        # plt.axis('tight')
+        # plt.axis('equal')
 
         # plt.axis([train_new[sp].min(), train_new[sp].max(), train_new[sp].min(), train_new[sp].max()], 'tight')
         r2 = round(metrics.r2_score(self.y_test[sp], self.predict[sp]), 6)
@@ -456,8 +461,8 @@ class combustionML(object):
 
         plt.figure()
         plt.plot(t_n[sp], p_n[sp], 'kd', ms=1)
-        plt.axis('tight')
-        plt.axis('equal')
+        # plt.axis('tight')
+        # plt.axis('equal')
 
         # plt.axis([train_new[sp].min(), train_new[sp].max(), train_new[sp].min(), train_new[sp].max()], 'tight')
         r2_n = round(metrics.r2_score(t_n[sp], p_n[sp]), 6)
@@ -546,5 +551,5 @@ if __name__ == "__main__":
     # dl_react(nns, class_scaler, kmeans, 1001, 2, df_x_input_l.values[0].reshape(1,-1))
     # cut_plot(nns, class_scaler, kmeans, 2, 'H', 0)
 
-    a, b_o, b_n = cmp_plot(x_columns, nns, 2, 'H', 0, 0.9)
-    c = abs(b_n[b_o != 0] - b_o[b_o != 0]) / b_o[b_o != 0]
+    cmpr, ode_o, ode_n = cmp_plot(x_columns, nns, 2, 'H', 0, 0.9)
+    # c = abs(b_n[b_o != 0] - b_o[b_o != 0]) / b_o[b_o != 0]
