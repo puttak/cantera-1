@@ -11,6 +11,7 @@ class dataScaling(object):
 
         self.switcher = {
             'std': 'std',
+            'std2': 'std2',
             'nrm': 'nrm',
             'log': 'log',
             'log2': 'log2',
@@ -27,6 +28,11 @@ class dataScaling(object):
             out = self.std.fit_transform(out)
             out = self.norm.fit_transform(out)
 
+        if self.switcher.get(self.case) == 'std2':
+            self.norm = MaxAbsScaler()
+            self.std = StandardScaler()
+            out = self.std.fit_transform(input_data)
+
         if self.switcher.get(self.case) == 'nrm':
             self.norm = MinMaxScaler()
             self.std = StandardScaler()
@@ -37,6 +43,7 @@ class dataScaling(object):
             self.norm = MinMaxScaler()
             self.std = StandardScaler()
             out = self.norm.fit_transform(out)
+
         if self.switcher.get(self.case) == 'log2':
             self.norm = MinMaxScaler()
             self.norm_1 = MinMaxScaler()
@@ -60,6 +67,9 @@ class dataScaling(object):
             out = self.norm_1.transform(input_data)
             out = self.std.transform(out)
             out = self.norm.transform(out)
+
+        if self.switcher.get(self.case) == 'std2':
+            out = self.std.transform(input_data)
 
         if self.switcher.get(self.case) == 'nrm':
             out = self.norm.transform(input_data)
@@ -86,6 +96,9 @@ class dataScaling(object):
             out = self.norm.inverse_transform(input_data)
             out = self.std.inverse_transform(out)
             out = self.norm_1.inverse_transform(out)
+
+        if self.switcher.get(self.case) == 'std2':
+            out = self.std.inverse_transform(input_data)
 
         if self.switcher.get(self.case) == 'nrm':
             out = self.norm.inverse_transform(input_data)

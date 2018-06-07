@@ -65,7 +65,7 @@ def dl_react(nns, temp, n_fuel, swt, ini):
         acc_log = nns[1].y_scaling.transform(state_tmp)
         for i in range(acc_std.shape[1]-1):
             # if state_log[0, i] > swt:
-            #if acc[0, i] > swt and state_tmp[0, i] > 1e-4:
+            #if acc_log[0, i] > swt and state_tmp[0, i] > 1e-4:
             if acc_std[0, i] > 0:
                 state_tmp[0, i] = state_std[0, i]
 
@@ -222,8 +222,8 @@ def cmp_plot(columns_ini, nns, n_fuel, sp, st_step, swt):
             for i in range(state_new.shape[1]):
                 # print(i)
                 # print(state_log)
-                #if acc_log[0, i] > swt:
-                if acc_std[0, i] > 0:
+                if acc_log[0, i] > swt:
+                # if acc_std[0, i] > 0:
                     # if state_new[0, i] > swt:
                     # if acc[0, i] > swt or state_new[0,i]>1e-4:
                     # print(acc[0,i])
@@ -486,7 +486,7 @@ class combustionML(object):
         print(hyper)
 
         self.composeResnetModel(n_neurons=hyper[0], blocks=hyper[1], drop1=hyper[2])
-        self.fitModel(epochs=400, batch_size=1024 * 8)
+        self.fitModel(epochs=200, batch_size=1024 * 8)
 
         return self.prediction()
 
@@ -494,28 +494,50 @@ class combustionML(object):
 if __name__ == "__main__":
     T = np.random.rand(20)*1000 + 1001
     n_s = np.random.rand(20) * 7.6 + 0.4
-    n_l = np.random.rand(20) * 800
+    n_l = np.random.rand(20) * 40
     # n = np.random.randint(10000, size=2000)
     n = np.concatenate((n_s, n_l))
     XX, YY = np.meshgrid(T, n)
     ini = np.concatenate((XX.reshape(-1, 1), YY.reshape(-1, 1)), axis=1)
 
     # generate data
-    df_x_input, df_y_target = data_gen(ini, 'H2')
+    df_x_input_org, df_y_target_org = data_gen(ini, 'H2')
     # df_x_input, df_y_target = fm_data_gen()
-    fm_x, fm_y = fm_data_gen()
-    df_x_input.append(fm_x)
-    df_y_target.append(fm_y)
-    x_columns = df_x_input.columns
+    # fm_x, fm_y = fm_data_gen()
+    # df_x_input.append(fm_x)
+    # df_y_target.append(fm_y)
+    x_columns = df_x_input_org.columns
+
+    import cantera as ct
+    gas = ct.Solution('./data/h2_sandiego.cti')
+    P = ct.one_atm
+    XT = df_x_input_org.values[:,:-1]
+    phi_dot = []
+    for i in range(0, XT.shape[0]):
+    # for i in range(0, 5):
+        gas.TP = XT[i,-1],P
+        gas.set_unnormalized_mole_fractions(XT[i,:-1])
+        rho = gas.density
+
+        wdot = gas.net_production_rates
+        dTdt = - (np.dot(gas.partial_molar_enthalpies, wdot) /
+                  (rho * gas.cp))
+        phi_dot.append(np.hstack((wdot, dTdt)))
+
+    phi_dot_org = np.asarray(phi_dot)
+    phi_dot = pd.DataFrame(data=phi_dot_org, columns=gas.species_names+['T'])
+
+
 
     # df_x_input = df_x_input.assign(H_sbr_O=df_x_input['H'] - df_x_input['O'])
     # df_x_input = df_x_input.assign(H_add_O=df_x_input['H'] + df_x_input['O'])
     # drop inert N2
-    df_x_input = df_x_input.drop('N2', axis=1)
+    df_x_input = df_x_input_org.drop('N2', axis=1)
     # df_x_input = df_x_input.drop('dT', axis=1)
-    df_y_target = df_y_target.drop('N2', axis=1)
-    df_y_target = df_y_target.drop('dt', axis=1)
+    df_y_target = df_y_target_org.drop('N2', axis=1)
+    df_y_target = df_y_target_org.drop('dt', axis=1)
     # df_y_target = df_y_target.drop('T', axis=1)
+    phi_dot = phi_dot.drop('N2',axis=1)
 
     # df_x_std = df_x_input[df_y_target['H'] > 0.005]
     # df_y_std = df_y_target[df_y_target['H'] > 0.005]
@@ -523,13 +545,14 @@ if __name__ == "__main__":
     df_y_std = df_y_target
 
     # rand_sp = np.random.choice(df_x_input.index.values,200000)
-    rand_sp = np.random.choice(df_x_std.index.values,1000000)
+    rand_sp = np.random.choice(df_x_std.index.values,300000)
     # df_x_input = df_x_input.loc[rand_sp]
     # df_y_target = df_y_target.loc[rand_sp]
     df_x_std = df_x_std.loc[rand_sp]
     df_y_std = df_y_std.loc[rand_sp]
+    phi_dot = phi_dot.loc[rand_sp]
 
-    # # create two nets
+    # create multiple nets
     nns = []
     r2s = []
 
@@ -539,17 +562,43 @@ if __name__ == "__main__":
     r2 = nn_std.run([200, 2, 0.5])
     r2s.append(r2)
     nns.append(nn_std)
-    # nns.append(nn_std)
+    nns.append(nn_std)
+    #
+    #
+    # # nn_log = combustionML(df_x_input[df_y_target['H'] < 1e-6], df_y_target[df_y_target['H'] < 1e-6], 'log')
+    # nn_log = combustionML(df_x_std, df_y_std, 'log')
+    # r2 = nn_log.run([200, 2, 0.])
+    # r2s.append(r2)
+    # nns.append(nn_log)
+    #
+    # nn_nrm = combustionML(df_x_std, df_y_std, 'nrm')
+    # r2 = nn_nrm.run([200, 2, 0.5])
+    # # r2s.append(r2)
+    # # nns.append(nn_nrm)
+    #
+    #
+    # # dl_react(nns, class_scaler, kmeans, 1001, 2, df_x_input_l.values[0].reshape(1,-1))
+    # # cut_plot(nns, class_scaler, kmeans, 2, 'H', 0)
+    #
+    # cmpr, ode_o, ode_n = cmp_plot(x_columns, nns, 2, 'H', 0, 0.9)
+    # cmpr, ode_o, ode_n = cmp_plot(x_columns, nns, 50, 'OH', 0, 1)
+    cmp_plot(x_columns, nns, 20, 'O', 0, 0)
+    cmp_plot(x_columns, nns, 10, 'O', 10, 1)
+    cmp_plot(x_columns, nns, 100, 'O', 10, 0)
+    #
+    # # c = abs(b_n[b_o != 0] - b_o[b_o != 0]) / b_o[b_o != 0]
+
+    #%%
+    phi_scale=phi_dot/nn_std.x_scaling.std.var_[:-1]
+
+    from sklearn.decomposition import PCA
+    npc=7
+    pca = PCA(n_components=npc)
+    principal_components = pca.fit_transform(nn_std.x_train)
+    principal_df = pd.DataFrame(data=principal_components,
+                            columns=['pc'+str(x) for x in range(npc)])
+
+    #final_df = pd.concat([principal_df, df[['target']]], axis=1)
+    pca.explained_variance_ratio_.sum()
 
 
-    # nn_log = combustionML(df_x_input[df_y_target['H'] < 1e-6], df_y_target[df_y_target['H'] < 1e-6], 'log')
-    nn_log = combustionML(df_x_std, df_y_std, 'log')
-    r2 = nn_log.run([200, 2, 0.])
-    r2s.append(r2)
-    nns.append(nn_log)
-
-    # dl_react(nns, class_scaler, kmeans, 1001, 2, df_x_input_l.values[0].reshape(1,-1))
-    # cut_plot(nns, class_scaler, kmeans, 2, 'H', 0)
-
-    cmpr, ode_o, ode_n = cmp_plot(x_columns, nns, 2, 'H', 0, 0.9)
-    # c = abs(b_n[b_o != 0] - b_o[b_o != 0]) / b_o[b_o != 0]
