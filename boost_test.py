@@ -11,10 +11,11 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler, StandardScaler, MaxAbsScaler
 from dataScaling import LogScaler, AtanScaler, NoScaler
+from sklearn.decomposition import PCA
 
 # create data
 def create_data():
-    T = np.random.rand(20) * 1000 + 1001
+    T = np.random.rand(20) * 800 + 1001
     n_s = np.random.rand(15) * 7.6 + 0.1
     n_l = np.random.rand(30) * 40
 
@@ -47,50 +48,43 @@ def test_data(temp, n_fuel, columns):
     return ode_o, ode_n
 
 
-def sp_plot_gpu(species, models, do, do_1):
-    test = do_1[species]
-    dtest = xgb.DMatrix(do)
-    # sp_pred = models[species].predict(dtest)
-    sp_pred = np.exp(models[species].predict(dtest))
-
-    plt.figure()
-    plt.subplot(1, 2, 1)
-    plt.plot(test)
-    plt.plot(sp_pred, 'rd', ms=2)
-    plt.title(species + ':' + str(r2_score(test, sp_pred)))
-
-    plt.subplot(1, 2, 2)
-    plt.plot((test - sp_pred) / test)
-    plt.ylim(-0.1, 0.1)
-    plt.show()
-    return sp_pred
-
-
 def sp_plot_gpu_mask(n, species, models, scalers, do, do_1, mask):
     plt.figure()
     for state in {'b:', 'u:'}:
         mask = ~mask
         if mask.any():
             test = do_1[mask][species]
+            input = do[mask][species]
             dtest = xgb.DMatrix(do)
 
             # sp_pred = np.exp(models[state + species].predict(dtest))
             sp_pred = scalers[state + species].inverse_transform(
                 models[state + species].predict(dtest).reshape(-1, 1))
-            # sp_pred = sp_pred[mask]
+            model_pred = sp_pred[mask]
 
+            # divide res
             sp_pred = sp_pred[mask] * do[mask][species].values.reshape(-1, 1) \
                       + do[mask][species].values.reshape(-1, 1)
+            # plus res
+            # sp_pred = sp_pred[mask] + do[mask][species].values.reshape(-1, 1)
 
-            plt.subplot(1, 2, 1)
-            plt.plot(test.index, test)
-            plt.plot(test.index, sp_pred, 'rd', ms=2)
-            plt.title(species + ':' + str(r2_score(test.values.reshape(-1,1), sp_pred)))
+            f, axarr = plt.subplots(1,2)
+            # plt.subplot(1, 2, 1)
+            axarr[0].plot(test.index, test)
+            axarr[0].plot(test.index, sp_pred, 'rd', ms=2)
+            axarr[0].set_title(species + ':' + str(r2_score(test.values.reshape(-1,1), sp_pred)))
 
-            plt.subplot(1, 2, 2)
-            plt.plot((test.values.reshape(-1, 1) - sp_pred.reshape(-1,1)) / test.values.reshape(-1, 1))
-            plt.ylim(-0.1, 0.1)
-            plt.title(str(n) + '_' + species)
+            # plt.subplot(1, 2, 2)
+            # _,ax1=plt.subplots()
+            axarr[1].plot((test.values.reshape(-1, 1) - sp_pred.reshape(-1,1)) / test.values.reshape(-1, 1))
+            axarr[1].set_ylim(-0.1, 0.1)
+            axarr[1].set_title(str(n) + '_' + species)
+
+
+            ax2 = axarr[1].twinx()
+            ax2.plot((test-input)/input,'y:')
+            ax2.plot(model_pred,'r:')
+            ax2.set_ylim(-0.2,0.2)
 
     plt.show()
 
@@ -111,6 +105,31 @@ if __name__ == '__main__':
     indx = (df_x != 0).all(1)
     df_x = df_x.loc[indx]
     df_y = df_y.loc[indx]
+#%%
+    pca= PCA(n_components=3) # pca for 3D visualization
+
+    scaler_pca = NoScaler()
+    # train data
+    df_x_s=df_x.sample(frac=0.1) # take 10% data
+    train=pca.fit_transform(scaler_pca.transform(df_x_s))
+    print('variance:',sum(pca.explained_variance_ratio_))
+    train = np.hstack((train,0*np.ones((train.shape[0],1)))) # add a label
+
+    delta = 1
+    cube_train = np.round(train / delta)[:,:3]
+    ijk = [tuple(i)for i in cube_train.tolist()]
+    skt=set(tuple(i)for i in cube_train.tolist())
+    len(skt)
+    # cube_test = np.round(test/delta)[:,:3]
+    # skt_test = set(tuple(i) for i in cube_test.tolist())
+    # test_1=np.round(test[test[:,3]==1]/delta)[:,:3]
+    # skt_1 = set(tuple(i) for i in test_1.tolist())
+    # test_25=np.round(test[test[:,3]==25]/delta)[:,:3]
+    # skt_25 = set(tuple(i) for i in test_25.tolist())
+    # print('1:',len(skt.intersection(skt_1))/len(skt_1))
+    # print('25:',len(skt.intersection(skt_25))/len(skt_25))
+
+
 #%%
     # target study
     res = (df_y - df_x) / df_x[df_x != 0]
@@ -144,7 +163,7 @@ if __name__ == '__main__':
     mask_train = df_x['HO2'] < 1
     bstReg_gpu = {}
     scalers = {}
-    species = ['T']
+    species = ['O2','O','H2O','H2O2']
 
     # species = ['H2','OH','O2','O','H2O']
     # species = columns.drop(['dt','N2','f'])
@@ -164,8 +183,8 @@ if __name__ == '__main__':
                 # scaler = AtanScaler()
                 # scaler = NoScaler()
                 # scaler = MinMaxScaler()
-                # scaler = MaxAbsScaler()
-                scaler = StandardScaler()
+                scaler = MaxAbsScaler()
+                # scaler = StandardScaler()
 
                 outlier = 100
                 # target_train = np.log(y_train[sp])
@@ -179,16 +198,17 @@ if __name__ == '__main__':
                 dtest = xgb.DMatrix(X_test[target_test < outlier], label=target_test[target_test < outlier])
                 param = {
                     'max_depth': 10,
-                    'eta': 0.3,
+                    'gamma': 0.3,
+                    'eta': 0.25,
                     'silent': 1,
                     'eval_metric': 'mae',
                     'predictor': 'gpu_predictor',
                     'objective': 'gpu:reg:linear'
                 }
 
-                num_round = 500
+                num_round = 100
                 bst = xgb.train(param, dtrain, num_round,
-                                evals=[(dtest, 'test')], early_stopping_rounds=20)
+                                evals=[(dtest, 'test')], early_stopping_rounds=10)
 
                 bstReg_gpu[state + sp] = bst
                 scalers[state + sp] = scaler
@@ -198,13 +218,12 @@ if __name__ == '__main__':
     xgb.plot_importance(bst)
     plt.show()
 
-    std=StandardScaler().fit_transform(target_train)
     # load test
     # %%
 
     for sp_test in species:
         # for n in [.5, 1.4, 2.6, 5, 10, 13, 25]:
-        for n in [1, 25]:
+        for n in [ 25]:
             ode_o, ode_n = test_data(1501, n, columns)
             ode_o['C'] = ode_o['H2'] + ode_o['H2O']
             ode_o['tot:O'] = 2 * ode_o['O2'] + ode_o['OH'] + ode_o['O'] + ode_o['H2O'] \

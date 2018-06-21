@@ -13,6 +13,7 @@ class dataScaling(object):
             'std': 'std',
             'std2': 'std2',
             'nrm': 'nrm',
+            'no':'no',
             'log': 'log',
             'log2': 'log2',
             'tan': 'tan'
@@ -35,8 +36,14 @@ class dataScaling(object):
 
         if self.switcher.get(self.case) == 'nrm':
             self.norm = MinMaxScaler()
+            # self.norm = MaxAbsScaler()
             self.std = StandardScaler()
             out = self.norm.fit_transform(input_data)
+
+        if self.switcher.get(self.case) == 'no':
+            self.norm = MinMaxScaler()
+            self.std = StandardScaler()
+            out = input_data
 
         if self.switcher.get(self.case) == 'log':
             out = - np.log(np.asarray(input_data / 100) + 1e-20)
@@ -74,6 +81,9 @@ class dataScaling(object):
         if self.switcher.get(self.case) == 'nrm':
             out = self.norm.transform(input_data)
 
+        if self.switcher.get(self.case) == 'no':
+            out = input_data
+
         if self.switcher.get(self.case) == 'log':
             out = - np.log(np.asarray(input_data / 100) + 1e-20)
             out = self.norm.transform(out)
@@ -102,6 +112,9 @@ class dataScaling(object):
 
         if self.switcher.get(self.case) == 'nrm':
             out = self.norm.inverse_transform(input_data)
+
+        if self.switcher.get(self.case) == 'no':
+            out = input_data
 
         if self.switcher.get(self.case) == 'log':
             out = self.norm.inverse_transform(input_data)
@@ -135,6 +148,21 @@ class LogScaler(object):
         return out
 
 
+class LogMirrorScaler(object):
+
+    def fit_transform(self, input_data):
+        out = np.log(input_data)
+        return out
+
+    def transform(self, input_data):
+        out = np.log(input_data)
+        return out
+
+    def inverse_transform(self, input_data):
+        out = np.exp(input_data)
+        return out
+
+
 class AtanScaler(object):
 
     def fit_transform(self, input_data):
@@ -152,6 +180,10 @@ class AtanScaler(object):
 
 class NoScaler(object):
 
+    def fit(self, input_data):
+        out = input_data
+        return out
+
     def fit_transform(self, input_data):
         out = input_data
         return out
@@ -163,3 +195,5 @@ class NoScaler(object):
     def inverse_transform(self, input_data):
         out = input_data
         return out
+
+

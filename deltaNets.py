@@ -486,7 +486,7 @@ class combustionML(object):
         print(hyper)
 
         self.composeResnetModel(n_neurons=hyper[0], blocks=hyper[1], drop1=hyper[2])
-        self.fitModel(epochs=200, batch_size=1024 * 8)
+        self.fitModel(epochs=100, batch_size=1024 * 8)
 
         return self.prediction()
 
