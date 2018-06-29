@@ -65,7 +65,7 @@ def ignite(ini):
 
         while solver.successful() and solver.t < t_end:
             # state_org = np.hstack([gas[gas.species_names].Y, gas.T, dt])
-            state_org = np.hstack([gas[gas.species_names].X, gas.T, dt])
+            state_org = np.hstack([gas[gas.species_names].X, np.dot(gas.partial_molar_enthalpies,gas[gas.species_names].X), gas.T, gas.density, dt])
             # state_org = np.hstack([gas[gas.species_names].X, gas.T,
             #                        np.dot(gas.partial_molar_enthalpies,gas.X)/gas.density, dt])
             if solver.t == 0:
@@ -76,7 +76,7 @@ def ignite(ini):
             gas.TPX = solver.y[0], P, solver.y[1:]
 
             # Extract the state of the reactor
-            state_new = np.hstack([gas[gas.species_names].X, gas.T, dt])
+            state_new = np.hstack([gas[gas.species_names].X,np.dot(gas.partial_molar_enthalpies,gas[gas.species_names].X), gas.T,gas.density, dt])
 
             # state_new = np.hstack([gas[gas.species_names].Y])
             state_res = state_new - state_org
@@ -107,8 +107,8 @@ def ignite_f(ini):
     fuel = ini[2]
 
     t_end = 1e-3
-    dt = 1e-6
-    for dt_ini in[1e-6]:
+    dt_ini = 1e-6
+    for dt in[5e-7,7e-7,1e-6,1.5e-6]:
         if fuel == 'H2':
             # gas = ct.Solution('./data/Boivin_newTherm.cti')
             gas = ct.Solution('./data/h2_sandiego.cti')
@@ -128,18 +128,27 @@ def ignite_f(ini):
 
         while solver.successful() and solver.t < t_end:
             # state_org = np.hstack([gas[gas.species_names].Y, gas.T, dt])
-            state_org = np.hstack([gas[gas.species_names].X, gas.T, dt, n_fuel])
+            # state_org = np.hstack(
+            #     [gas[gas.species_names].X, np.dot(gas.partial_molar_enthalpies, gas[gas.species_names].X),
+            #      gas.T, gas.density, dt, n_fuel])
             # state_org = np.hstack([gas[gas.species_names].X, gas.T,
             #                        np.dot(gas.partial_molar_enthalpies,gas.X)/gas.density, dt])
             if solver.t == 0:
+                state_org = np.hstack(
+                    [gas[gas.species_names].X, np.dot(gas.partial_molar_enthalpies, gas[gas.species_names].X),
+                     gas.T, gas.density, dt_ini, n_fuel])
                 solver.integrate(solver.t + dt_ini)
             else:
+                state_org = np.hstack(
+                    [gas[gas.species_names].X, np.dot(gas.partial_molar_enthalpies, gas[gas.species_names].X),
+                     gas.T, gas.density, dt, n_fuel])
                 solver.integrate(solver.t + dt)
+
             # gas.TPY = solver.y[0], P, solver.y[1:]
             gas.TPX = solver.y[0], P, solver.y[1:]
 
             # Extract the state of the reactor
-            state_new = np.hstack([gas[gas.species_names].X, gas.T, dt, n_fuel])
+            state_new = np.hstack([gas[gas.species_names].X,np.dot(gas.partial_molar_enthalpies,gas[gas.species_names].X), gas.T,gas.density, dt, n_fuel])
 
             # state_new = np.hstack([gas[gas.species_names].Y])
             state_res = state_new - state_org
@@ -239,6 +248,7 @@ def ignite_post(ini):
 
     t_end = 1e-3
     dt = 1e-6
+    # dt = 5e-7
     for dt_ini in[0]:
         if fuel == 'H2':
             # gas = ct.Solution('./data/Boivin_newTherm.cti')
@@ -259,7 +269,7 @@ def ignite_post(ini):
 
         while solver.successful() and solver.t < t_end:
             # state_org = np.hstack([gas[gas.species_names].Y, gas.T, dt])
-            state_org = np.hstack([gas[gas.species_names].X, gas.T, dt])
+            state_org = np.hstack([gas[gas.species_names].X,np.dot(gas.partial_molar_enthalpies,gas[gas.species_names].X), gas.T,gas.density, dt])
             # state_org = np.hstack([gas[gas.species_names].X, gas.T,
             #                        np.dot(gas.partial_molar_enthalpies,gas.X)/gas.density, dt])
             solver.integrate(solver.t + dt)
@@ -267,7 +277,7 @@ def ignite_post(ini):
             gas.TPX = solver.y[0], P, solver.y[1:]
 
             # Extract the state of the reactor
-            state_new = np.hstack([gas[gas.species_names].X, gas.T, dt])
+            state_new = np.hstack([gas[gas.species_names].X,np.dot(gas.partial_molar_enthalpies,gas[gas.species_names].X), gas.T,gas.density, dt])
 
             # state_new = np.hstack([gas[gas.species_names].Y])
             state_res = state_new - state_org
@@ -350,7 +360,9 @@ def data_gen_f(ini_Tn, fuel):
     new = np.concatenate(new)
 
     columnNames = gas.species_names
+    columnNames = columnNames + ['Hs']
     columnNames = columnNames + ['T']
+    columnNames = columnNames + ['Rho']
     columnNames = columnNames+['dt']
     columnNames = columnNames + ['f']
 
