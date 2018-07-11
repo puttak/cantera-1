@@ -14,9 +14,11 @@ from sklearn.metrics import r2_score
 
 # create data
 def create_data():
-    T = np.random.rand(20) * 1000 + 1001
-    n_s = np.random.rand(15) * 7.6 + 0.1
-    n_l = np.random.rand(30) * 30
+    T = np.random.rand(25) * 1000 + 1001
+    # n_s = np.random.rand(20) * 10 + 0.1
+    # n_l = np.random.rand(30) * 30
+    n_s = np.linspace(0, 8, 20)
+    n_l = np.linspace(0, 30, 30)
 
     n = np.concatenate((n_s, n_l))
     XX, YY = np.meshgrid(T, n)
@@ -63,9 +65,16 @@ def qt_analysis(res):
 
 
 def xgb_model_train(df_x, res, mask, species):
+
+    scaler_dict = {'log': LogScaler(),
+                   'no': NoScaler(),
+                   'mmx': MinMaxScaler(),
+                   'mabs': MaxAbsScaler(),
+                   'std': StandardScaler(),
+                   'atan': AtanScaler()}
+
     xgb_models = {}
     scalers = {}
-    # species = ['O2','H2O','O','HO2']
 
     for state in {'b:', 'u:'}:
         mask = ~mask
@@ -78,12 +87,7 @@ def xgb_model_train(df_x, res, mask, species):
                                                                 test_size=.1, random_state=42)
 
             for sp in species:
-                # scaler = LogScaler()
-                # scaler = AtanScaler()
-                # scaler = NoScaler()
-                # scaler = MinMaxScaler()
-                scaler = MaxAbsScaler()
-                # scaler = StandardScaler()
+                scaler = scaler_dict['mmx']
 
                 outlier = 100
 
@@ -111,7 +115,7 @@ def xgb_model_train(df_x, res, mask, species):
                 xgb_models[state + sp] = bst
                 scalers[state + sp] = scaler
 
-                print(sp + ':', r2_score(np.exp(bst.predict(dtest)), target_test[target_test < outlier]))
+                print(sp + ':', r2_score(bst.predict(dtest), target_test))
 
     xgb.plot_importance(bst)
 
@@ -177,64 +181,34 @@ def sp_plot_gpu_mask(n, species, models, scalers, do, do_1, mask):
 
 if __name__ == '__main__':
     # generate data
-    # create_data()
+    create_data()
 
     # load training
     df_x, df_y = pickle.load(open('data/x_y_org.p', 'rb'))
     columns = df_x.columns
-    # df_x = df_x.drop('N2', axis=1)
+    train_features = columns.drop(['f'])
+
     f = set(df_x['f'])
     f = np.asarray(sorted(list(map(float, f)))).reshape(-1, 1)
-    # df_x = df_x.drop('f', axis=1)
-    train_features = columns.drop(['f'])
+
     df_x = df_x[train_features]
     # df_y = df_y.drop('N2', axis=1)
 
     indx = (df_x != 0).all(1)
     df_x = df_x.loc[indx]
     df_y = df_y.loc[indx]
-    # %%
-    pca = PCA(n_components=3)  # pca for 3D visualization
-
-    scaler_pca = NoScaler()
-    # train data
-    df_x_s = df_x.sample(frac=0.1)  # take 10% data
-    train = pca.fit_transform(scaler_pca.transform(df_x_s))
-    print('variance:', sum(pca.explained_variance_ratio_))
-    train = np.hstack((train, 0 * np.ones((train.shape[0], 1))))  # add a label
-
-    delta = 1
-    cube_train = np.round(train / delta)[:, :3]
-    ijk = [tuple(i) for i in cube_train.tolist()]
-    skt = set(tuple(i) for i in cube_train.tolist())
-    len(skt)
-    # cube_test = np.round(test/delta)[:,:3]
-    # skt_test = set(tuple(i) for i in cube_test.tolist())
-    # test_1=np.round(test[test[:,3]==1]/delta)[:,:3]
-    # skt_1 = set(tuple(i) for i in test_1.tolist())
-    # test_25=np.round(test[test[:,3]==25]/delta)[:,:3]
-    # skt_25 = set(tuple(i) for i in test_25.tolist())
-    # print('1:',len(skt.intersection(skt_1))/len(skt_1))
-    # print('25:',len(skt.intersection(skt_25))/len(skt_25))
 
     # %%
-    # target study
+    # target value
     # res = (df_y - df_x) / df_x
     res = df_y / df_x
     # res = (df_y - df_x)
-
     # res = df_y
+
+    # add new features
     df_x['C'] = tot(df_x, 'C')
     df_x['tot:O'] = tot(df_x, 'O')
     df_x['tot:H'] = tot(df_x, 'H')
-
-    # df_x['C'] = df_x['H2'] + df_x['H2O']
-    #
-    # df_x['tot:O'] = 2 * df_x['O2'] + df_x['OH'] + df_x['O'] + df_x['H2O'] \
-    #                 + 2 * df_x['HO2'] + 2 * df_x['H2O2']
-    #
-    # df_x['tot:H'] = 2 * df_x['H2'] + df_x['H'] + df_x['OH'] + 2 * df_x['H2O'] \
-    #                 + df_x['HO2'] + 2 * df_x['H2O2']
 
     mask_train = df_x['HO2'] < 1
 
@@ -242,10 +216,11 @@ if __name__ == '__main__':
                    'no': NoScaler(),
                    'mmx': MinMaxScaler(),
                    'mabs': MaxAbsScaler(),
-                   'std': StandardScaler()}
+                   'std': StandardScaler(),
+                   'atan': AtanScaler()}
 
-    species = ['H2O2']
-    # species = ['O2', 'H2O', 'O', 'HO2']
+    species = ['O']
+    # species = ['O2', 'H2O', 'O', 'HO2','T']
     # species = columns.drop(['dt','N2','f'])
 
     bstReg_gpu = {}
@@ -257,13 +232,12 @@ if __name__ == '__main__':
         if mask_train.any():
             df_x_masked = df_x.loc[mask_train]
             df_y_masked = res.loc[mask_train]
-            # df_y_masked[df_y_masked>0.2]=np.nan
+
             X_train, X_test, y_train, y_test = train_test_split(df_x_masked, df_y_masked,
-                                                                test_size=.1, random_state=42)
+                                                                test_size=.05, random_state=42)
 
             for sp in species:
-                scaler = scaler_dict['no']
-
+                scaler = scaler_dict['log']
                 outlier = 100
 
                 target_train = scaler.fit_transform(y_train[sp].values.reshape(-1, 1))
@@ -274,23 +248,25 @@ if __name__ == '__main__':
                 # dtest = xgb.DMatrix(X_test, label=target_test)
                 dtest = xgb.DMatrix(X_test[target_test < outlier], label=target_test[target_test < outlier])
                 param = {
-                    'max_depth': 50,
+                    'max_depth': 10,
                     'gamma': 0.15,
                     'eta': 0.25,
                     'silent': 1,
+                    'subsample': 0.8,
+                    'colsample_bytree': 0.8,
                     'eval_metric': 'mae',
                     'predictor': 'gpu_predictor',
                     'objective': 'gpu:reg:linear'
                 }
 
-                num_round = 100
+                num_round = 50
                 bst = xgb.train(param, dtrain, num_round,
                                 evals=[(dtest, 'test')], early_stopping_rounds=10)
 
                 bstReg_gpu[state + sp] = bst
                 scalers[state + sp] = scaler
 
-                print(sp + ':', r2_score(np.exp(bst.predict(dtest)), target_test[target_test < outlier]))
+                print(sp + ':', r2_score(bst.predict(dtest), target_test[target_test < outlier]))
 
     xgb.plot_importance(bst)
     plt.show()
@@ -298,16 +274,21 @@ if __name__ == '__main__':
     pickle.dump((bstReg_gpu, scalers), open('xgb_' + '_'.join(bstReg_gpu.keys()) + '_models.p', 'wb'))
 
     # %%
+    # n_dict = [.5, 1.4, 2.6, 5, 10, 13, 25]
+    # n_dict = [13,12.6,12.7,12.8,12.9]
+    # n_dict = np.random.rand(3) * 30
+    # n_dict = [5, 10, 13, 25]
+    n_dict = [13, 25]
+
     for sp_test in species:
-        # for n in [.5, 1.4, 2.6, 5, 10, 13, 25]:
-        for n in [13, 25]:
-            ode_o, ode_n = test_data(1401, n, columns)
+        for n in n_dict:
+            ode_o, ode_n = test_data(1501, n, columns)
             ode_o = ode_o[train_features]
             ode_o['C'] = tot(ode_o, 'C')
             ode_o['tot:O'] = tot(ode_o, 'O')
             ode_o['tot:H'] = tot(ode_o, 'H')
             # mask_pred = (ode_o['H2'] < 0.01) | (ode_o['O2'] < 0.01)
             mask_pred = ode_o['HO2'] < 1
-            # mask_pred = ~mask_pred
+
             sp_plot_gpu_mask(n, sp_test, bstReg_gpu, scalers, ode_o, ode_n, mask_pred)
             plt.show()

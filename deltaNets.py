@@ -22,7 +22,7 @@ from keras.callbacks import ModelCheckpoint
 from keras import optimizers
 
 from res_block import res_block
-from reactor_ode_delta import data_gen, ignite, ignite_post
+from reactor_ode_delta import data_gen_f, ignite_post
 from dataScaling import dataScaling
 from flameMasterTest import fm_data_gen
 import cantera as ct
@@ -338,13 +338,13 @@ class combustionML(object):
 
     def __init__(self, df_x_input, df_y_target, scaling_case):
         x_train, x_test, y_train, y_test = model_selection.train_test_split(df_x_input, df_y_target,
-                                                                            test_size=0.1,
+                                                                            test_size=0.001,
                                                                             random_state=42)
 
         self.x_scaling = dataScaling()
         self.y_scaling = dataScaling()
-        self.x_train = self.x_scaling.fit_transform(x_train, scaling_case)
-        self.y_train = self.y_scaling.fit_transform(y_train, scaling_case)
+        self.x_train = self.x_scaling.fit_transform(x_train, scaling_case['x'])
+        self.y_train = self.y_scaling.fit_transform(y_train, scaling_case['y'])
         x_test = self.x_scaling.transform(x_test)
 
         self.scaling_case = scaling_case
@@ -359,7 +359,7 @@ class combustionML(object):
         self.vsplit = None
         self.predict = None
 
-    def composeResnetModel(self, n_neurons=200, blocks=2, drop1=0.1, loss='mse', optimizer='adam', batch_norm=False):
+    def composeResnetModel(self, n_neurons=200, blocks=2, drop1=0.1, loss='mae', optimizer='adam', batch_norm=False):
 
         print('set up ANN')
         floatx = 'float32'
@@ -397,7 +397,7 @@ class combustionML(object):
                                      period=5)
         self.callbacks_list = [checkpoint]
 
-    def fitModel(self, batch_size=1024, epochs=400, vsplit=0.3):
+    def fitModel(self, batch_size=1024, epochs=200, vsplit=0.1):
 
         self.vsplit = vsplit
         self.history = self.model.fit(
@@ -423,22 +423,12 @@ class combustionML(object):
         return R2_score
 
     def inference(self, x):
-        # tmp, _, _ = data_scaling(x, self.scaling_case, self.norm_x, self.std_x)
         tmp = self.x_scaling.transform(x)
         predict = self.model.predict(tmp)
         # inverse for out put
-        # out = data_inverse(predict, self.scaling_case, self.norm_y, self.std_y)
         out = self.y_scaling.inverse_transform(predict)
         # eliminate negative values
         out[out < 0] = 0
-        # normalized total mass fraction to 1
-        # out_y = out[:, :-1]
-        # out_y = normalize(out_y, axis=1, norm='l1')
-        # out_norm = np.concatenate((out_y, out[:, -1].reshape(-1, 1)), axis=1)
-
-        # out_y = out[:, :-1]
-        # out_y = normalize(out_y, axis=1, norm='l1') * (np.asarray(x)[:, :-1].sum(1).reshape(-1, 1))
-        # out_norm = np.concatenate((out_y, out[:, -1].reshape(-1, 1)), axis=1)
 
         return out
 
@@ -486,7 +476,7 @@ class combustionML(object):
         print(hyper)
 
         self.composeResnetModel(n_neurons=hyper[0], blocks=hyper[1], drop1=hyper[2])
-        self.fitModel(epochs=100, batch_size=1024 * 8)
+        self.fitModel(epochs=2000, batch_size=1024 * 8)
 
         return self.prediction()
 
@@ -501,7 +491,7 @@ if __name__ == "__main__":
     ini = np.concatenate((XX.reshape(-1, 1), YY.reshape(-1, 1)), axis=1)
 
     # generate data
-    df_x_input_org, df_y_target_org = data_gen(ini, 'H2')
+    df_x_input_org, df_y_target_org = data_gen_f(ini, 'H2')
     # df_x_input, df_y_target = fm_data_gen()
     # fm_x, fm_y = fm_data_gen()
     # df_x_input.append(fm_x)

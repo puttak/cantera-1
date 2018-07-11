@@ -6,86 +6,128 @@ import pickle
 from reactor_ode_delta import ignite_post, data_gen_f
 import pandas as pd
 from deltaNets import combustionML
-from boost_test import test_data
+from boost_test import test_data, tot, create_data
 from sklearn.preprocessing import MinMaxScaler, StandardScaler, MaxAbsScaler
+from dataScaling import LogScaler, AtanScaler, NoScaler
 
 if __name__ == '__main__':
+    # %%
+    # create_data()
     # load training
     df_x, df_y = pickle.load(open('data/x_y_org.p', 'rb'))
     columns = df_x.columns
-    # df_x = df_x.drop('N2', axis=1)
-    f = set(df_x['f'])
-    f = np.asarray(sorted(list(map(float, f)))).reshape(-1, 1)
-    df_x = df_x.drop('f', axis=1)
-    df_y = df_y.drop('N2', axis=1)
+    train_features = columns.drop(['f', 'dt'])
+
+    n_H2 = set(df_x['f'])
+    n_H2 = np.asarray(sorted(list(map(float, n_H2)))).reshape(-1, 1)
+
+    df_x = df_x[train_features]
+    df_y = df_y[train_features]
 
     indx = (df_x != 0).all(1)
     df_x = df_x.loc[indx]
     df_y = df_y.loc[indx]
-#%%
-    # target study
-    # res = (df_y - df_x) / df_x
-    # res = (df_y - df_x)
-    res = df_y
-    # res = res.drop(res.columns.intersection(['f', 'N2', 'dt']), axis=1)
-    # species = ['H2O']
-    species = ['O2','O','H2O','H2O2']
-    # target = res[species]
-    scaler = MinMaxScaler()
-    # scaler = StandardScaler()
-    # scaler = MaxAbsScaler()
-    target = pd.DataFrame(scaler.fit_transform(res[species]),columns=species)
 
-    df_x['C'] = df_x['H2'] + df_x['H2O']
+    # target
+    res_dict = {'y/x': df_y / df_x,
+                'y': df_y,
+                'y-x': df_y - df_x}
+    res = res_dict['y/x']
 
-    # df_x['tot:O'] = 2 * df_x['O2'] + df_x['OH'] + df_x['O'] + df_x['H2O'] \
-    #                 + 2 * df_x['HO2'] + 2 * df_x['H2O2']
-    #
-    # df_x['tot:H'] = 2 * df_x['H2'] + df_x['H'] + df_x['OH'] + 2 * df_x['H2O'] \
-    #                 + df_x['HO2'] + 2 * df_x['H2O2']
+    scaler_dict = {'log': LogScaler(),
+                   'no': NoScaler(),
+                   'mmx': MinMaxScaler(),
+                   'mabs': MaxAbsScaler(),
+                   'std': StandardScaler(),
+                   'atan': AtanScaler()}
+    scaler = scaler_dict['no']
 
-    #%%
-    nn_std = combustionML(df_x, target, 'nrm')
-    r2 = nn_std.run([200, 2, 0.5])
+    # species = ['O']
+    # species = ['O2', 'H2', 'OH', 'O', 'H2O']
+    # species = train_features.drop(['dt'])
+    species = train_features
 
-    #%%
+    target = pd.DataFrame(scaler.fit_transform(res[species]), columns=species)
+    outlier = 1.2
+
+    idx = (target < outlier).all(1)
+    out_ratio = idx.sum() / target.shape[0]
+
+    target = target.loc[idx]
+    df_x = df_x.loc[idx]
+
+    # add new features
+    # df_x['C'] = tot(df_x, 'C')
+    # df_x['tot:O'] = tot(df_x, 'O')
+    # df_x['tot:H'] = tot(df_x, 'H')
+
+    # %%
+    # model formulate
+    # nn_std = combustionML(df_x, target, 'std2')
+    nn_std = combustionML(df_x, target, {'x': 'std2', 'y': 'std2'})
+    r2 = nn_std.run([200, 16, 0.])
+
+    # %%
     # test
-    # species=res.columns
+    post_species = {'O','O2'}
+    # post_species = species
+    ini_T = 1501
+    for sp in post_species.intersection(species):
+        for n in [13,25]:
+            input, test = test_data(ini_T, n, columns)
+            # input['C'] = tot(input, 'C')
+            # input['tot:O'] = tot(input, 'O')
+            # input['tot:H'] = tot(input, 'H')
+            input = input.drop(['dt'], axis=1)
+            pred = pd.DataFrame(scaler.inverse_transform(nn_std.inference(input)), columns=target.columns)
+            model_pred = pred
+            pred = pred * input
 
-    for sp in species:
-        for n in [1,25]:
-            ode_o, ode_n = test_data(1501, n, columns)
-            ode_o['C'] = ode_o['H2'] + ode_o['H2O']
-            # ode_o['tot:O'] = 2 * ode_o['O2'] + ode_o['OH'] + ode_o['O'] + ode_o['H2O'] \
-            #                  + 2 * ode_o['HO2'] + 2 * ode_o['H2O2']
-            # ode_o['tot:H'] = 2 * ode_o['H2'] + ode_o['H'] + ode_o['OH'] + 2 * ode_o['H2O'] \
-            #                  + ode_o['HO2'] + 2 * ode_o['H2O2']
+            test_target = test / input
+            # test_target = test
 
-            # pred=pd.DataFrame(nn_std.inference(ode_o),columns=res.columns)
-            # pred=pd.DataFrame(nn_std.inference(ode_o),columns=target.columns)
-            pred=pd.DataFrame(scaler.inverse_transform(nn_std.inference(ode_o)),columns=target.columns)
-
-            test=(ode_o[sp]+pred[sp]*ode_o[sp]-ode_n[sp])/ode_n[sp]
-
-
-            f, axarr = plt.subplots(1,2)
-            # plt.subplot(1, 2, 1)
-            axarr[0].plot(ode_n[sp])
-            # axarr[0].plot(ode_o[sp] + pred[sp] * ode_o[sp], 'rd', ms=2)
+            f, axarr = plt.subplots(1, 2)
+            axarr[0].plot(test[sp])
             axarr[0].plot(pred[sp], 'rd', ms=2)
             # axarr[0].set_title(sp + ':' + str(r2_score(test.values.reshape(-1,1), sp_pred)))
 
-            # plt.subplot(1, 2, 2)
-            # _,ax1=plt.subplots()
-            # axarr[1].plot((ode_n[sp] - ode_o[sp] - pred[sp] * ode_o[sp]) / ode_n[sp])
-            axarr[1].plot((ode_n[sp] - pred[sp]) / ode_n[sp])
-            axarr[1].set_ylim(-0.1, 0.1)
+            # axarr[1].plot((test[sp] - input[sp]) / test[sp], 'r')
+            axarr[1].plot((test[sp] - pred[sp]) / test[sp], 'k')
+            axarr[1].set_ylim(-0.005, 0.005)
             axarr[1].set_title(str(n) + '_' + sp)
 
-
             ax2 = axarr[1].twinx()
-            ax2.plot((ode_n[sp] - ode_o[sp]) / ode_o[sp],'y:')
-            ax2.plot(pred[sp],'r:')
-            ax2.set_ylim(-0.2,0.2)
+            ax2.plot(test_target[sp], 'rd', ms=2)
+            ax2.plot(model_pred[sp], 'bd', ms=2)
+            ax2.set_ylim(0.8, 1.2)
 
+            plt.show()
+
+    # %%
+    for sp in post_species.intersection(species):
+        for n in [25]:
+            input, test = test_data(ini_T, n, columns)
+            # input['C'] = tot(input, 'C')
+            # input['tot:O'] = tot(input, 'O')
+            # input['tot:H'] = tot(input, 'H')
+            input = input.drop(['dt'], axis=1)
+            init = 50
+            input_model = input.values[init].reshape(1, -1)
+            pred = input_model
+            for i in range(input.shape[0]-init):
+                pred_model = nn_std.inference(input_model)
+                pred = np.vstack((pred, input_model * pred_model))
+                input_model = input_model * pred_model
+            pred = pd.DataFrame(pred, columns=target.columns)
+
+            f, axarr = plt.subplots(1, 2)
+            axarr[0].plot(test[sp].values[init:])
+            axarr[0].plot(pred[sp], 'rd', ms=2)
+            axarr[0].set_title(str(n) + ':' + sp)
+
+            # axarr[1].plot(pred[sp], 'rd', ms=2)
+
+            axarr[1].plot((test[sp].values[init-1:] - pred[sp]) / test[sp].values[init-1:], 'k')
+            # axarr[1].set_ylim(-0.005, 0.005)
+            # axarr[1].set_title(str(n) + '_' + sp)
             plt.show()
