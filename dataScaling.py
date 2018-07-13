@@ -8,6 +8,7 @@ class dataScaling(object):
         self.norm_1 = None
         self.std = None
         self.case = None
+        self.scale = 1
 
         self.switcher = {
             'std': 'std',
@@ -32,6 +33,10 @@ class dataScaling(object):
             out = self.norm.fit_transform(out)
 
         if self.switcher.get(self.case) == 'std2':
+            self.std = StandardScaler()
+            out = self.std.fit_transform(input_data)
+
+        if self.switcher.get(self.case) == 'std_nrm':
             # self.norm = MaxAbsScaler()
             self.norm = MinMaxScaler()
             self.std = StandardScaler()
@@ -50,13 +55,15 @@ class dataScaling(object):
             out = input_data
 
         if self.switcher.get(self.case) == 'log':
-            out = - np.log(np.asarray(input_data / 100) + 1e-20)
-            self.norm = MinMaxScaler()
+            out = - np.log(np.asarray(input_data / self.scale) + 1e-20)
+            # out = - np.log(np.asarray(input_data) + 1e-20)
+            # self.norm = MinMaxScaler()
             self.std = StandardScaler()
-            out = self.norm.fit_transform(out)
+            out = self.std.fit_transform(out)
 
         if self.switcher.get(self.case) == 'log_std':
             out = - np.log(np.asarray(input_data / 100) + 1e-20)
+            # out = - np.log(np.asarray(input_data + 1e-20))
             self.norm = MinMaxScaler()
             self.std = StandardScaler()
             out = self.std.fit_transform(out)
@@ -88,6 +95,9 @@ class dataScaling(object):
 
         if self.switcher.get(self.case) == 'std2':
             out = self.std.transform(input_data)
+
+        if self.switcher.get(self.case) == 'std_nrm':
+            out = self.std.transform(input_data)
             out = self.norm.transform(out)
 
         if self.switcher.get(self.case) == 'nrm':
@@ -97,11 +107,13 @@ class dataScaling(object):
             out = input_data
 
         if self.switcher.get(self.case) == 'log':
-            out = - np.log(np.asarray(input_data / 100) + 1e-20)
-            out = self.norm.transform(out)
+            out = - np.log(np.asarray(input_data / self.scale) + 1e-20)
+            # out = - np.log(np.asarray(input_data) + 1e-20)
+            out = self.std.transform(out)
 
         if self.switcher.get(self.case) == 'log_std':
             out = - np.log(np.asarray(input_data / 100) + 1e-20)
+            # out = - np.log(np.asarray(input_data + 1e-20))
             out = self.std.transform(out)
             out = self.norm.transform(out)
 
@@ -126,6 +138,9 @@ class dataScaling(object):
             out = self.norm_1.inverse_transform(out)
 
         if self.switcher.get(self.case) == 'std2':
+            out = self.std.inverse_transform(input_data)
+
+        if self.switcher.get(self.case) == 'std_nrm':
             out = self.norm.inverse_transform(input_data)
             out = self.std.inverse_transform(out)
 
@@ -136,12 +151,13 @@ class dataScaling(object):
             out = input_data
 
         if self.switcher.get(self.case) == 'log':
-            out = self.norm.inverse_transform(input_data)
-            out = (np.exp(-out) - 1e-20) * 100
+            out = self.std.inverse_transform(input_data)
+            out = (np.exp(-out) - 1e-20) * self.scale
 
         if self.switcher.get(self.case) == 'log_std':
             out = self.norm.inverse_transform(input_data)
             out = self.std.inverse_transform(out)
+            # out = np.exp(-out) -1e-20
             out = (np.exp(-out) - 1e-20) * 100
 
         if self.switcher.get(self.case) == 'log2':

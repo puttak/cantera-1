@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 
 import cantera as ct
 
+
 print("Running Cantera version: {}".format(ct.__version__))
 
 
@@ -22,8 +23,8 @@ class ReactorOde(object):
 
         # State vector is [T, Y_1, Y_2, ... Y_K]
         # self.gas.set_unnormalized_mass_fractions(y[1:])
-        self.gas.set_unnormalized_mole_fractions(y[1:])
-        self.gas.TP = y[0], self.P
+        # self.gas.set_unnormalized_mole_fractions(y[1:])
+        self.gas.TPX = y[0], self.P, y[1:]
         rho = self.gas.density
 
         wdot = self.gas.net_production_rates
@@ -53,8 +54,8 @@ def ignite_f(ini):
             # gas = ct.Solution('./data/Boivin_newTherm.cti')
             gas = ct.Solution('./data/h2_sandiego.cti')
         if fuel == 'CH4':
-            gas = ct.Solution('./data/grimech12.cti')
-            # gas = ct.Solution('gri30.xml')
+            # gas = ct.Solution('./data/grimech12.cti')
+            gas = ct.Solution('Lu19.xml')
         P = ct.one_atm
 
         gas.TPX = temp, P, fuel + ':' + str(n_fuel) + ',O2:1,N2:4'
@@ -99,75 +100,11 @@ def ignite_f(ini):
             train_new.append(state_new)
 
             # if (abs(state_res.max() / state_org.max()) < 1e-5 and (solver.t / dt) > 200):
-            if ((res.max() < 1e-3 and (solver.t / dt) > 50)) or (gas['H2'].X < 0.005 or gas['H2'].X > 0.995):
+            if ((res.max() < 1e-3 and (solver.t / dt) > 50)) or (gas[fuel].X < 0.005 or gas[fuel].X > 0.995):
                 # if res.max() < 1e-5:
+                print(res)
                 break
 
-    return train_org, train_new
-
-
-def ignite_random_x(ini):
-    train_org = []
-    train_new = []
-
-    temp = ini[0]
-    n_fuel = ini[1]
-    fuel = ini[2]
-
-    dt = 1e-6
-    t_end = 1e-3
-    for dt_ini in [1e-6, 9e-7, 1.1e-6]:
-        if fuel == 'H2':
-            # gas = ct.Solution('./data/Boivin_newTherm.cti')
-            gas = ct.Solution('./data/h2_sandiego.cti')
-        if fuel == 'CH4':
-            gas = ct.Solution('./data/grimech12.cti')
-            # gas = ct.Solution('gri30.xml')
-        P = ct.one_atm
-
-        rnd = np.random.RandomState(int(n_fuel))
-        ini_x = rnd.rand(gas.X.size)
-        ini_x /= ini_x.sum()
-        gas.TPX = temp, P, ini_x
-        # y0 = np.hstack((gas.T, gas.Y))
-        x0 = np.hstack((gas.T, gas.X))
-        ode = ReactorOde(gas)
-        solver = scipy.integrate.ode(ode)
-        solver.set_integrator('vode', method='bdf', with_jacobian=True)
-        # solver.set_initial_value(y0, 0.0)
-        solver.set_initial_value(x0, 0.0)
-
-        while solver.successful() and solver.t < t_end:
-            # state_org = np.hstack([gas[gas.species_names].Y, gas.T, dt])
-            state_org = np.hstack([gas[gas.species_names].X, gas.T, dt])
-            # state_org = np.hstack([gas[gas.species_names].X, gas.T,
-            #                        np.dot(gas.partial_molar_enthalpies,gas.X)/gas.density, dt])
-
-            if solver.t == 0:
-                solver.integrate(solver.t + dt_ini)
-            solver.integrate(solver.t + dt)
-            # gas.TPY = solver.y[0], P, solver.y[1:]
-            gas.TPX = solver.y[0], P, solver.y[1:]
-
-            # Extract the state of the reactor
-            state_new = np.hstack([gas[gas.species_names].X, gas.T, dt])
-
-            # state_new = np.hstack([gas[gas.species_names].Y])
-            state_res = state_new - state_org
-            res = abs(state_res[state_org != 0] / state_org[state_org != 0])
-            # res[res==np.inf]=0
-            # res = np.nan_to_num(res)
-            # res=res[res!=0]
-            # print(res.max())
-
-            # Update the sample
-            train_org.append(state_org)
-            train_new.append(state_new)
-
-            # if (abs(state_res.max() / state_org.max()) < 1e-5 and (solver.t / dt) > 200):
-            if ((res.max() < 1e-3 and (solver.t / dt) > 50)) or (gas['H2'].Y < 0.005 or gas['H2'].Y > 0.995):
-                # if res.max() < 1e-5:
-                break
 
     return train_org, train_new
 
@@ -241,8 +178,8 @@ def data_gen_f(ini_Tn, fuel):
         # gas = ct.Solution('./data/Boivin_newTherm.cti')
         gas = ct.Solution('./data/h2_sandiego.cti')
     if fuel == 'CH4':
-        gas = ct.Solution('./data/grimech12.cti')
-
+        # gas = ct.Solution('./data/grimech12.cti')
+        gas = ct.Solution('Lu19.xml')
     print("multiprocessing:", end='')
     t_start = time.time()
     p = mp.Pool(processes=mp.cpu_count())
@@ -275,9 +212,16 @@ def data_gen_f(ini_Tn, fuel):
 
 
 if __name__ == "__main__":
-    ini_T = np.linspace(1201, 1501, 1)
-    ini = [(temp, 2) for temp in ini_T]
+    ini_T = np.linspace(2001, 2001, 1)
+    ini = [(temp, 0.25) for temp in ini_T]
     # ini = ini + [(temp, 10) for temp in ini_T]
-    a, b = data_gen_f(ini, 'H2')
-    plt.plot(a['H2'])
+    fuel = 'CH4'
+    a, b = data_gen_f(ini, fuel)
+    plt.plot(a[fuel])
     plt.show()
+    # temp = 1501
+    # n_fuel = 2
+    # ode_o, ode_n = ignite_post((temp, n_fuel, 'H2'))
+    # plt.plot(ode_o[0])
+    # plt.show()
+

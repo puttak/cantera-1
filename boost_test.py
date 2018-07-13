@@ -14,7 +14,7 @@ from sklearn.metrics import r2_score
 
 # create data
 def create_data():
-    T = np.random.rand(25) * 1000 + 1001
+    T = np.random.rand(20) * 1000 + 1001
     # n_s = np.random.rand(20) * 10 + 0.1
     # n_l = np.random.rand(30) * 30
     n_s = np.linspace(0, 8, 20)
@@ -167,7 +167,7 @@ def sp_plot_gpu_mask(n, species, models, scalers, do, do_1, mask):
             # accuracy
             axarr[1].plot((test.values.reshape(-1, 1) - sp_pred.reshape(-1, 1)) / test.values.reshape(-1, 1), 'b')
             axarr[1].plot((test.values.reshape(-1, 1) - input.values.reshape(-1, 1)) / test.values.reshape(-1, 1), 'r')
-            axarr[1].set_ylim(-0.1, 0.1)
+            axarr[1].set_ylim(-0.005, 0.005)
             axarr[1].set_title(str(n) + '_' + species)
 
             # learning
@@ -181,7 +181,7 @@ def sp_plot_gpu_mask(n, species, models, scalers, do, do_1, mask):
 
 if __name__ == '__main__':
     # generate data
-    create_data()
+    # create_data()
 
     # load training
     df_x, df_y = pickle.load(open('data/x_y_org.p', 'rb'))

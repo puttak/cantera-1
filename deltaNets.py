@@ -359,7 +359,7 @@ class combustionML(object):
         self.vsplit = None
         self.predict = None
 
-    def composeResnetModel(self, n_neurons=200, blocks=2, drop1=0.1, loss='mae', optimizer='adam', batch_norm=False):
+    def composeResnetModel(self, n_neurons=200, blocks=2, drop1=0.1, loss='mse', optimizer='adam', batch_norm=False):
 
         print('set up ANN')
         floatx = 'float32'
@@ -379,7 +379,8 @@ class combustionML(object):
 
         # less then 2 res_block, there will be variance
         for b in range(blocks):
-            x = res_block(x, n_neurons, stage=1, block=ascii_lowercase[b], d1=drop1, bn=batch_norm)
+        # x = res_block(x, n_neurons, stage=1, block=ascii_lowercase[b], d1=drop1, bn=batch_norm)
+            x = res_block(x, n_neurons, stage=1, block=str(b), d1=drop1, bn=batch_norm)
 
         predictions = Dense(dim_label, activation='linear')(x)
 
@@ -397,7 +398,7 @@ class combustionML(object):
                                      period=5)
         self.callbacks_list = [checkpoint]
 
-    def fitModel(self, batch_size=1024, epochs=200, vsplit=0.1):
+    def fitModel(self, batch_size=1024, epochs=200, vsplit=0.3):
 
         self.vsplit = vsplit
         self.history = self.model.fit(
@@ -475,8 +476,9 @@ class combustionML(object):
     def run(self, hyper):
         print(hyper)
 
-        self.composeResnetModel(n_neurons=hyper[0], blocks=hyper[1], drop1=hyper[2])
-        self.fitModel(epochs=2000, batch_size=1024 * 8)
+        self.composeResnetModel(n_neurons=hyper[0], blocks=hyper[1],
+                                drop1=hyper[2], loss='mae',batch_norm=False)
+        self.fitModel(epochs=400, batch_size=1024 * 8 * 2, vsplit=0.1)
 
         return self.prediction()
 

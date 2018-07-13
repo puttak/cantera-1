@@ -64,16 +64,19 @@ if __name__ == '__main__':
     # %%
     # model formulate
     # nn_std = combustionML(df_x, target, 'std2')
-    nn_std = combustionML(df_x, target, {'x': 'std2', 'y': 'std2'})
-    r2 = nn_std.run([200, 16, 0.])
+    # nn_std = combustionML(df_x, target, {'x': 'log_std', 'y': 'log_std'})
+    nn_std = combustionML(df_x, target, {'x': 'log', 'y': 'log'})
+    # nn_std = combustionML(df_x, target, {'x': 'std2', 'y': 'std2'})
+    r2 = nn_std.run([200, 2, 0.])
+    nn_std.plt_loss()
 
     # %%
     # test
-    post_species = {'O','O2'}
-    # post_species = species
+    # post_species = {'O','O2'}
+    post_species = species
     ini_T = 1501
     for sp in post_species.intersection(species):
-        for n in [13,25]:
+        for n in [3]:
             input, test = test_data(ini_T, n, columns)
             # input['C'] = tot(input, 'C')
             # input['tot:O'] = tot(input, 'O')
@@ -97,37 +100,38 @@ if __name__ == '__main__':
             axarr[1].set_title(str(n) + '_' + sp)
 
             ax2 = axarr[1].twinx()
-            ax2.plot(test_target[sp], 'rd', ms=2)
-            ax2.plot(model_pred[sp], 'bd', ms=2)
+            ax2.plot(test_target[sp], 'bd', ms=2)
+            ax2.plot(model_pred[sp], 'rd', ms=2)
             ax2.set_ylim(0.8, 1.2)
-
+            plt.savefig('fig/' + str(n) + '_' + sp)
             plt.show()
 
     # %%
     for sp in post_species.intersection(species):
-        for n in [25]:
+        for n in [13]:
             input, test = test_data(ini_T, n, columns)
             # input['C'] = tot(input, 'C')
             # input['tot:O'] = tot(input, 'O')
             # input['tot:H'] = tot(input, 'H')
             input = input.drop(['dt'], axis=1)
-            init = 50
+            init = 100
             input_model = input.values[init].reshape(1, -1)
             pred = input_model
-            for i in range(input.shape[0]-init):
+            for i in range(input.shape[0]-(init+1)):
                 pred_model = nn_std.inference(input_model)
                 pred = np.vstack((pred, input_model * pred_model))
                 input_model = input_model * pred_model
             pred = pd.DataFrame(pred, columns=target.columns)
 
             f, axarr = plt.subplots(1, 2)
-            axarr[0].plot(test[sp].values[init:])
+            axarr[0].plot(test[sp].values[init:],'bd', ms=2)
             axarr[0].plot(pred[sp], 'rd', ms=2)
             axarr[0].set_title(str(n) + ':' + sp)
 
             # axarr[1].plot(pred[sp], 'rd', ms=2)
 
-            axarr[1].plot((test[sp].values[init-1:] - pred[sp]) / test[sp].values[init-1:], 'k')
+            axarr[1].plot(abs(test[sp].values[init:] - pred[sp]) / test[sp].values[init:], 'k')
             # axarr[1].set_ylim(-0.005, 0.005)
             # axarr[1].set_title(str(n) + '_' + sp)
+            plt.savefig('fig/acc_' + str(n) + '_' + sp)
             plt.show()
