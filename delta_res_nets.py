@@ -17,13 +17,16 @@ if __name__ == '__main__':
     df_x, df_y = pickle.load(open('data/x_y_org.p', 'rb'))
     columns = df_x.columns
     train_features = columns.drop(['f', 'dt'])
+    # train_features = columns.drop(['f'])
 
-    n_H2 = set(df_x['f'])
-    n_H2 = np.asarray(sorted(list(map(float, n_H2)))).reshape(-1, 1)
+    # initial conditions
+    n_H2 = sorted(list(map(float,set(df_x['f']))))
+    n_H2 = np.asarray(n_H2).reshape(-1, 1)
 
     df_x = df_x[train_features]
     df_y = df_y[train_features]
 
+    # drop df_x == 0
     indx = (df_x != 0).all(1)
     df_x = df_x.loc[indx]
     df_y = df_y.loc[indx]
@@ -34,20 +37,11 @@ if __name__ == '__main__':
                 'y-x': df_y - df_x}
     res = res_dict['y/x']
 
-    scaler_dict = {'log': LogScaler(),
-                   'no': NoScaler(),
-                   'mmx': MinMaxScaler(),
-                   'mabs': MaxAbsScaler(),
-                   'std': StandardScaler(),
-                   'atan': AtanScaler()}
-    scaler = scaler_dict['no']
-
     # species = ['O']
-    # species = ['O2', 'H2', 'OH', 'O', 'H2O']
     # species = train_features.drop(['dt'])
     species = train_features
 
-    target = pd.DataFrame(scaler.fit_transform(res[species]), columns=species)
+    target = pd.DataFrame(res[species], columns=species)
     outlier = 1.2
 
     idx = (target < outlier).all(1)
@@ -63,7 +57,6 @@ if __name__ == '__main__':
 
     # %%
     # model formulate
-    # nn_std = combustionML(df_x, target, 'std2')
     # nn_std = combustionML(df_x, target, {'x': 'log_std', 'y': 'log_std'})
     nn_std = combustionML(df_x, target, {'x': 'log', 'y': 'log'})
     # nn_std = combustionML(df_x, target, {'x': 'std2', 'y': 'std2'})
@@ -76,13 +69,13 @@ if __name__ == '__main__':
     post_species = species
     ini_T = 1501
     for sp in post_species.intersection(species):
-        for n in [3]:
+        for n in [13]:
             input, test = test_data(ini_T, n, columns)
             # input['C'] = tot(input, 'C')
             # input['tot:O'] = tot(input, 'O')
             # input['tot:H'] = tot(input, 'H')
             input = input.drop(['dt'], axis=1)
-            pred = pd.DataFrame(scaler.inverse_transform(nn_std.inference(input)), columns=target.columns)
+            pred = pd.DataFrame(nn_std.inference(input), columns=target.columns)
             model_pred = pred
             pred = pred * input
 
@@ -94,10 +87,10 @@ if __name__ == '__main__':
             axarr[0].plot(pred[sp], 'rd', ms=2)
             # axarr[0].set_title(sp + ':' + str(r2_score(test.values.reshape(-1,1), sp_pred)))
 
-            # axarr[1].plot((test[sp] - input[sp]) / test[sp], 'r')
             axarr[1].plot((test[sp] - pred[sp]) / test[sp], 'k')
             axarr[1].set_ylim(-0.005, 0.005)
-            axarr[1].set_title(str(n) + '_' + sp)
+            # axarr[1].set_title(str(n) + '_' + sp)
+            f.suptitle(str(n) + '_' + sp)
 
             ax2 = axarr[1].twinx()
             ax2.plot(test_target[sp], 'bd', ms=2)

@@ -20,7 +20,7 @@ def create_data():
     n_s = np.linspace(0, 8, 20)
     n_l = np.linspace(0, 30, 30)
 
-    n = np.concatenate((n_s, n_l))
+    n = np.unique(np.concatenate((n_s, n_l)))[1:]
     XX, YY = np.meshgrid(T, n)
     ini = np.concatenate((XX.reshape(-1, 1), YY.reshape(-1, 1)), axis=1)
 

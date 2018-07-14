@@ -398,7 +398,7 @@ class combustionML(object):
                                      period=5)
         self.callbacks_list = [checkpoint]
 
-    def fitModel(self, batch_size=1024, epochs=200, vsplit=0.3):
+    def fitModel(self, batch_size=1024, epochs=200, vsplit=0.1, sfl=True):
 
         self.vsplit = vsplit
         self.history = self.model.fit(
@@ -408,11 +408,11 @@ class combustionML(object):
             validation_split=vsplit,
             verbose=2,
             callbacks=self.callbacks_list,
-            shuffle=True)
+            shuffle=sfl)
 
     def prediction(self):
 
-        self.model.load_weights("./tmp/weights.best.cntk.hdf5")
+        # self.model.load_weights("./tmp/weights.best.cntk.hdf5")
 
         predict = self.model.predict(self.x_test.values)
         # predict = data_inverse(predict, self.scaling_case, self.norm_y, self.std_y)
@@ -475,10 +475,12 @@ class combustionML(object):
 
     def run(self, hyper):
         print(hyper)
-
-        self.composeResnetModel(n_neurons=hyper[0], blocks=hyper[1],
-                                drop1=hyper[2], loss='mae',batch_norm=False)
-        self.fitModel(epochs=400, batch_size=1024 * 8 * 2, vsplit=0.1)
+        sgd = optimizers.SGD(lr=0.3, decay=1e-3, momentum=0.9, nesterov=True)
+        rms = optimizers.RMSprop(lr=0.001, rho=0.9, epsilon=None, decay=0.0)
+        adam = optimizers.Adam(lr=0.001, beta_1=0.9, beta_2=0.999, epsilon=None, decay=0.0, amsgrad=True)
+        self.composeResnetModel(n_neurons=hyper[0], blocks=hyper[1], drop1=hyper[2],
+                                optimizer=adam, loss='mae',batch_norm=False)
+        self.fitModel(epochs=8000, batch_size=1024 * 8, vsplit=0.1, sfl=False)
 
         return self.prediction()
 
