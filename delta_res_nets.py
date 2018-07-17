@@ -1,14 +1,10 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from sklearn.metrics import r2_score
 import pickle
 
-from reactor_ode_delta import ignite_post, data_gen_f
 import pandas as pd
 from deltaNets import combustionML
 from boost_test import test_data, tot, create_data
-from sklearn.preprocessing import MinMaxScaler, StandardScaler, MaxAbsScaler
-from dataScaling import LogScaler, AtanScaler, NoScaler
 
 if __name__ == '__main__':
     # %%
@@ -58,18 +54,19 @@ if __name__ == '__main__':
     # %%
     # model formulate
     # nn_std = combustionML(df_x, target, {'x': 'log_std', 'y': 'log_std'})
-    nn_std = combustionML(df_x, target, {'x': 'log', 'y': 'log'})
     # nn_std = combustionML(df_x, target, {'x': 'std2', 'y': 'std2'})
+    nn_std = combustionML(df_x, target, {'x': 'log', 'y': 'log'})
+
     r2 = nn_std.run([200, 2, 0.])
     nn_std.plt_loss()
-
 
     # %%
     # test
     ensemble_mode = True
     # ensemble_mode = False
-    # post_species = species
+
     # post_species = {'T'}
+    # post_species = species
     post_species = species.drop(['cp', 'Hs', 'T', 'Rho'])
 
     ini_T = 1501
@@ -95,7 +92,7 @@ if __name__ == '__main__':
             f, axarr = plt.subplots(1, 2)
             axarr[0].plot(test[sp])
             axarr[0].plot(pred[sp], 'rd', ms=2)
-            # axarr[0].set_title(sp + ':' + str(r2_score(test.values.reshape(-1,1), sp_pred)))
+            # axarr[0].set_title(str(n) + '_' + sp)
 
             axarr[1].plot((test[sp] - pred[sp]) / test[sp], 'k')
             axarr[1].set_ylim(-0.005, 0.005)
@@ -109,7 +106,6 @@ if __name__ == '__main__':
             plt.savefig('fig/' + str(n) + '_' + sp)
             plt.show()
 
-    # %%
     for sp in post_species.intersection(species):
         for n in [13]:
             input, test = test_data(ini_T, n, columns)
@@ -150,3 +146,4 @@ if __name__ == '__main__':
             f.suptitle('Intigration: '+str(n) + '_' + sp)
             plt.savefig('fig/acc_' + str(n) + '_' + sp)
             plt.show()
+

@@ -46,7 +46,7 @@ def ignite_f(ini):
     t_end = 1e-3
 
     # dt_dict = [5e-7, 7e-7, 1e-6, 1.5e-6]
-    dt_dict = [1e-6]
+    dt_dict = [0.8e-6, 1e-6]
     # dt_dict = [8e-7,1e-6,1.2e-6]
     for dt in dt_dict:
         if fuel == 'H2':

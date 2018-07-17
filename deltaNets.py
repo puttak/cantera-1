@@ -63,9 +63,9 @@ def dl_react(nns, temp, n_fuel, swt, ini):
         state_tmp = state_log
         acc_std = nns[0].y_scaling.transform(state_tmp)
         acc_log = nns[1].y_scaling.transform(state_tmp)
-        for i in range(acc_std.shape[1]-1):
+        for i in range(acc_std.shape[1] - 1):
             # if state_log[0, i] > swt:
-            #if acc_log[0, i] > swt and state_tmp[0, i] > 1e-4:
+            # if acc_log[0, i] > swt and state_tmp[0, i] > 1e-4:
             if acc_std[0, i] > 0:
                 state_tmp[0, i] = state_std[0, i]
 
@@ -77,23 +77,23 @@ def dl_react(nns, temp, n_fuel, swt, ini):
         # state_tmp[0, 0] = max(state_tmp[0, 0], 0)
 
         # H mole conservation
-        if state_tmp[0, 0]>1e-2:
-            state_tmp[0, 0] = 2*state_org[0, 0] + 1*state_org[0, 1] + 1*state_org[0, 3] \
-                              + 2*state_org[0, 5] + 1*state_org[0, 6] + 2*state_org[0, 7] \
-                              - 1*state_tmp[0, 1] - 1*state_tmp[0, 3] \
-                              - 2*state_tmp[0, 5] - 1* state_tmp[0, 6] - 2* state_tmp[0, 7]
+        if state_tmp[0, 0] > 1e-2:
+            state_tmp[0, 0] = 2 * state_org[0, 0] + 1 * state_org[0, 1] + 1 * state_org[0, 3] \
+                              + 2 * state_org[0, 5] + 1 * state_org[0, 6] + 2 * state_org[0, 7] \
+                              - 1 * state_tmp[0, 1] - 1 * state_tmp[0, 3] \
+                              - 2 * state_tmp[0, 5] - 1 * state_tmp[0, 6] - 2 * state_tmp[0, 7]
 
             state_tmp[0, 0] = max(0.5 * state_tmp[0, 0], 0)
 
         # O mole conservation
-        if state_tmp[0, 2]>1e-2:
-            state_tmp[0, 2] = 2*state_org[0, 2] + 1*state_org[0, 3] + 1* state_org[0, 4] \
-                              + 1* state_org[0, 5] + 2* state_org[0, 6] + 2 * state_org[0, 7] \
-                              - 1*state_tmp[0, 3] - 1 * state_tmp[0, 4] \
-                              - 1*state_tmp[0, 5] - 2* state_tmp[0, 6] - 2* state_tmp[0, 7]
+        if state_tmp[0, 2] > 1e-2:
+            state_tmp[0, 2] = 2 * state_org[0, 2] + 1 * state_org[0, 3] + 1 * state_org[0, 4] \
+                              + 1 * state_org[0, 5] + 2 * state_org[0, 6] + 2 * state_org[0, 7] \
+                              - 1 * state_tmp[0, 3] - 1 * state_tmp[0, 4] \
+                              - 1 * state_tmp[0, 5] - 2 * state_tmp[0, 6] - 2 * state_tmp[0, 7]
             state_tmp[0, 2] = max(0.5 * state_tmp[0, 2], 0)
 
-        state_new = np.hstack((state_tmp,[[dt]]))
+        state_new = np.hstack((state_tmp, [[dt]]))
         # state_new = np.hstack((state_tmp[0, :-1], state_org[0, -3], state_tmp[0, -1], [dt])).reshape(1, -1)
 
         # state_new = np.hstack((state_tmp[0, :-1], [dt])).reshape(1, -1)
@@ -140,7 +140,7 @@ def cut_plot(x_columns, nns, n_fuel, sp, st_step, swt):
                              columns=columns_ini)
 
         ode_o = ode_o.drop('N2', axis=1)
-        #ode_o = ode_o.drop('dT', axis=1)
+        # ode_o = ode_o.drop('dT', axis=1)
         ode_n = ode_n.drop('N2', axis=1)
         # ode_n = ode_o + ode_n
         ode_n = ode_n.drop('dt', axis=1)
@@ -182,7 +182,6 @@ def cmp_plot(columns_ini, nns, n_fuel, sp, st_step, swt):
         ode_o = ode_o[ode_o[:, -1] == 1e-6]
         ode_n = ode_n[ode_n[:, -1] == 1e-6]
 
-
         # columns_ini = nns[0].df_x_input.columns.drop(['H_sbr_O'])
         # columns_ini = nns[0].df_x_input.columns
 
@@ -223,7 +222,7 @@ def cmp_plot(columns_ini, nns, n_fuel, sp, st_step, swt):
                 # print(i)
                 # print(state_log)
                 if acc_log[0, i] > swt:
-                # if acc_std[0, i] > 0:
+                    # if acc_std[0, i] > 0:
                     # if state_new[0, i] > swt:
                     # if acc[0, i] > swt or state_new[0,i]>1e-4:
                     # print(acc[0,i])
@@ -238,25 +237,24 @@ def cmp_plot(columns_ini, nns, n_fuel, sp, st_step, swt):
             # state_new[0, 0] = max(state_new[0, 0], 0)
 
             # H mole conservation
-            if state_new[0, 0]>1e-2:
-                state_new[0, 0] = 2*input_data[0, 0] + 1*input_data[0, 1] + 1* input_data[0, 3] \
-                              + 2* input_data[0, 5] + 1* input_data[0, 6] + 2 * input_data[0, 7] \
-                              - 1*state_new[0, 1] - 1 * state_new[0, 3] \
-                              - 2*state_new[0, 5] - 1* state_new[0, 6] - 2* state_new[0, 7]
+            if state_new[0, 0] > 1e-2:
+                state_new[0, 0] = 2 * input_data[0, 0] + 1 * input_data[0, 1] + 1 * input_data[0, 3] \
+                                  + 2 * input_data[0, 5] + 1 * input_data[0, 6] + 2 * input_data[0, 7] \
+                                  - 1 * state_new[0, 1] - 1 * state_new[0, 3] \
+                                  - 2 * state_new[0, 5] - 1 * state_new[0, 6] - 2 * state_new[0, 7]
                 state_new[0, 0] = max(0.5 * state_new[0, 0], 0)
 
             # O mole conservation
-            if state_new[0, 2]>1e-2:
-                state_new[0, 2] = 2*input_data[0, 2] + 1*input_data[0, 3] + 1* input_data[0, 4] \
-                              + 1* input_data[0, 5] + 2* input_data[0, 6] + 2 * input_data[0, 7] \
-                              - 1*state_new[0, 3] - 1 * state_new[0, 4] \
-                              - 1*state_new[0, 5] - 2* state_new[0, 6] - 2* state_new[0, 7]
+            if state_new[0, 2] > 1e-2:
+                state_new[0, 2] = 2 * input_data[0, 2] + 1 * input_data[0, 3] + 1 * input_data[0, 4] \
+                                  + 1 * input_data[0, 5] + 2 * input_data[0, 6] + 2 * input_data[0, 7] \
+                                  - 1 * state_new[0, 3] - 1 * state_new[0, 4] \
+                                  - 1 * state_new[0, 5] - 2 * state_new[0, 6] - 2 * state_new[0, 7]
                 state_new[0, 2] = max(0.5 * state_new[0, 2], 0)
 
             # state_new[0,-1]=input_data[0,-2]+state_new[0,-1]
             # state_new[0,:]=input_data[0,:-1]+state_new[0,:]
             cmpr.append(state_new)
-
 
         cmpr = np.concatenate(cmpr, axis=0)
         cmpr = pd.DataFrame(data=cmpr,
@@ -367,43 +365,28 @@ class combustionML(object):
         self.predict = None
 
     def composeResnetModel(self, n_neurons=200, blocks=2, drop1=0.1, loss='mse', optimizer='adam', batch_norm=False):
-        print('set up ANN')
-
-        # ANN parameters
-        # dim_input = self.x_train.shape[1]
-        # dim_label = self.y_train.shape[1]
-
-        # This returns a tensor
-        # self.inputs = Input(shape=(dim_input,), dtype=floatx)
-
-        print(self.inputs.dtype)
+        print('set up ANN :', self.inputs.dtype)
         # a layer instance is callable on a tensor, and returns a tensor
         x = Dense(n_neurons, name='1_base')(self.inputs)
         # x = BatchNormalization(axis=-1, name='1_base_bn')(x)
         x = Activation('relu')(x)
 
-        # less then 2 res_block, there will be variance
         for b in range(blocks):
-        # x = res_block(x, n_neurons, stage=1, block=ascii_lowercase[b], d1=drop1, bn=batch_norm)
             x = res_block(x, n_neurons, stage=1, block=str(b), d1=drop1, bn=batch_norm)
 
         predictions = Dense(self.dim_label, activation='linear')(x)
 
         self.model = Model(inputs=self.inputs, outputs=predictions)
-
         self.model.compile(loss=loss, optimizer=optimizer, metrics=['accuracy'])
 
-
-    def res_reg_model(self, model_input,id, n_neurons=200, blocks=2, drop1=0.1, batch_norm=False):
+    def res_reg_model(self, model_input, id, n_neurons=200, blocks=2, drop1=0.1, batch_norm=False):
         print('set up ANN :', model_input.dtype)
-
-        # a layer instance is callable on a tensor, and returns a tensor
-        x = Dense(n_neurons, name='1_base'+id)(model_input)
+        x = Dense(n_neurons, name='1_base' + id)(model_input)
         # x = BatchNormalization(axis=-1, name='1_base_bn')(x)
         x = Activation('relu')(x)
 
         for b in range(blocks):
-            x = res_block(x, n_neurons, stage=1, block=str(b)+id, d1=drop1, bn=batch_norm)
+            x = res_block(x, n_neurons, stage=1, block=str(b) + id, d1=drop1, bn=batch_norm)
 
         predictions = Dense(self.dim_label, activation='linear')(x)
 
@@ -411,16 +394,17 @@ class combustionML(object):
 
         return model
 
-
     def fitModel(self, batch_size=1024, epochs=200, vsplit=0.1, sfl=True):
         self.vsplit = vsplit
-        filepath = "./tmp/weights.best.hdf5"
+
+        filepath = "./tmp/history/weights.improvement_{val_loss:.4f}_.hdf5"
         checkpoint = ModelCheckpoint(filepath,
                                      monitor='val_loss',
                                      verbose=1,
                                      save_best_only=True,
                                      mode='min',
                                      period=5)
+
         self.callbacks_list = [checkpoint]
         self.history = self.model.fit(
             self.x_train, self.y_train,
@@ -431,9 +415,19 @@ class combustionML(object):
             callbacks=self.callbacks_list,
             shuffle=sfl)
 
+        names = []
+        for fl in os.listdir('./tmp/history'):
+            name = fl.split('_')
+            names.append(float(name[1]))
+        names.sort()
+        for i in range(4):
+            a = name[0] + '_' + format(names[i], '.4f') + '_' + name[2]
+            print(a)
+            os.rename('./tmp/history/' + a, './tmp/weights_' + str(i) + '.hdf5')
+
     def prediction(self):
         self.model.save_weights("./tmp/weights.last.hdf5")
-        self.model.load_weights("./tmp/weights.best.hdf5")
+        # self.model.load_weights("./tmp/weights.best.hdf5")
 
         predict = self.model.predict(self.x_test.values)
         predict = self.y_scaling.inverse_transform(predict)
@@ -444,18 +438,22 @@ class combustionML(object):
         return R2_score
 
     def ensemble(self):
-        # model_input = Input(shape=(self.dim_input,), dtype=self.floatx)
         model_input = self.inputs
 
-        model2 = self.res_reg_model(model_input,'a', n_neurons=200, blocks=2, drop1=0)
-        model2.load_weights("./tmp/weights.best.hdf5")
+        model_1 = self.res_reg_model(model_input, 'a', n_neurons=200, blocks=2, drop1=0)
+        model_2 = self.res_reg_model(model_input, 'b', n_neurons=200, blocks=2, drop1=0)
+        model_3 = self.res_reg_model(model_input, 'c', n_neurons=200, blocks=2, drop1=0)
+        model_4 = self.res_reg_model(model_input, 'd', n_neurons=200, blocks=2, drop1=0)
 
-        model4 = self.res_reg_model(model_input,'b', n_neurons=200, blocks=2, drop1=0)
-        model4.load_weights("./tmp/weights.last.hdf5")
+        model_last = self.res_reg_model(model_input, 'last', n_neurons=200, blocks=2, drop1=0)
+        model_last.load_weights("./tmp/weights.last.hdf5")
 
-        # outputs = [model2.outputs[0],
-        #            model4.outputs[0]]
-        models = [model2, model4]
+        model_1.load_weights("./tmp/weights_0.hdf5")
+        model_2.load_weights("./tmp/weights_1.hdf5")
+        model_3.load_weights("./tmp/weights_2.hdf5")
+        model_4.load_weights("./tmp/weights_3.hdf5")
+
+        models = [model_1, model_2, model_3, model_4, model_last]
         outputs = [model.outputs[0] for model in models]
         y = Average()(outputs)
 
@@ -525,8 +523,8 @@ class combustionML(object):
         adam = optimizers.Adam(lr=0.001, beta_1=0.9, beta_2=0.999,
                                epsilon=None, decay=0.0, amsgrad=True)
         self.composeResnetModel(n_neurons=hyper[0], blocks=hyper[1], drop1=hyper[2],
-                                optimizer=adam, loss='mae',batch_norm=False)
-        self.fitModel(epochs=400, batch_size=1024 * 8, vsplit=0.1, sfl=True)
+                                optimizer=adam, loss='mae', batch_norm=False)
+        self.fitModel(epochs=4000, batch_size=1024 * 8, vsplit=0.1, sfl=True)
         r2 = self.prediction()
         self.ensemble()
 
@@ -534,7 +532,7 @@ class combustionML(object):
 
 
 if __name__ == "__main__":
-    T = np.random.rand(20)*1000 + 1001
+    T = np.random.rand(20) * 1000 + 1001
     n_s = np.random.rand(20) * 7.6 + 0.4
     n_l = np.random.rand(20) * 40
     # n = np.random.randint(10000, size=2000)
@@ -551,14 +549,15 @@ if __name__ == "__main__":
     x_columns = df_x_input_org.columns
 
     import cantera as ct
+
     gas = ct.Solution('./data/h2_sandiego.cti')
     P = ct.one_atm
-    XT = df_x_input_org.values[:,:-1]
+    XT = df_x_input_org.values[:, :-1]
     phi_dot = []
     for i in range(0, XT.shape[0]):
-    # for i in range(0, 5):
-        gas.TP = XT[i,-1],P
-        gas.set_unnormalized_mole_fractions(XT[i,:-1])
+        # for i in range(0, 5):
+        gas.TP = XT[i, -1], P
+        gas.set_unnormalized_mole_fractions(XT[i, :-1])
         rho = gas.density
 
         wdot = gas.net_production_rates
@@ -567,9 +566,7 @@ if __name__ == "__main__":
         phi_dot.append(np.hstack((wdot, dTdt)))
 
     phi_dot_org = np.asarray(phi_dot)
-    phi_dot = pd.DataFrame(data=phi_dot_org, columns=gas.species_names+['T'])
-
-
+    phi_dot = pd.DataFrame(data=phi_dot_org, columns=gas.species_names + ['T'])
 
     # df_x_input = df_x_input.assign(H_sbr_O=df_x_input['H'] - df_x_input['O'])
     # df_x_input = df_x_input.assign(H_add_O=df_x_input['H'] + df_x_input['O'])
@@ -579,7 +576,7 @@ if __name__ == "__main__":
     df_y_target = df_y_target_org.drop('N2', axis=1)
     df_y_target = df_y_target_org.drop('dt', axis=1)
     # df_y_target = df_y_target.drop('T', axis=1)
-    phi_dot = phi_dot.drop('N2',axis=1)
+    phi_dot = phi_dot.drop('N2', axis=1)
 
     # df_x_std = df_x_input[df_y_target['H'] > 0.005]
     # df_y_std = df_y_target[df_y_target['H'] > 0.005]
@@ -587,7 +584,7 @@ if __name__ == "__main__":
     df_y_std = df_y_target
 
     # rand_sp = np.random.choice(df_x_input.index.values,200000)
-    rand_sp = np.random.choice(df_x_std.index.values,300000)
+    rand_sp = np.random.choice(df_x_std.index.values, 300000)
     # df_x_input = df_x_input.loc[rand_sp]
     # df_y_target = df_y_target.loc[rand_sp]
     df_x_std = df_x_std.loc[rand_sp]
@@ -630,17 +627,16 @@ if __name__ == "__main__":
     #
     # # c = abs(b_n[b_o != 0] - b_o[b_o != 0]) / b_o[b_o != 0]
 
-    #%%
-    phi_scale=phi_dot/nn_std.x_scaling.std.var_[:-1]
+    # %%
+    phi_scale = phi_dot / nn_std.x_scaling.std.var_[:-1]
 
     from sklearn.decomposition import PCA
-    npc=7
+
+    npc = 7
     pca = PCA(n_components=npc)
     principal_components = pca.fit_transform(nn_std.x_train)
     principal_df = pd.DataFrame(data=principal_components,
-                            columns=['pc'+str(x) for x in range(npc)])
+                                columns=['pc' + str(x) for x in range(npc)])
 
-    #final_df = pd.concat([principal_df, df[['target']]], axis=1)
+    # final_df = pd.concat([principal_df, df[['target']]], axis=1)
     pca.explained_variance_ratio_.sum()
-
-
