@@ -17,7 +17,7 @@ print("precision: " + K.floatx())
 # os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
 from keras.models import Model
-from keras.layers import Dense, Input, BatchNormalization, Activation, Dropout
+from keras.layers import Dense, Input, BatchNormalization, Activation, Dropout, Average
 from keras.callbacks import ModelCheckpoint
 from keras import optimizers
 
@@ -353,27 +353,32 @@ class combustionML(object):
         self.x_test = pd.DataFrame(data=x_test, columns=df_x_input.columns)
         self.y_test = pd.DataFrame(data=y_test, columns=df_y_target.columns)
 
+        self.floatx = 'float32'
+        self.dim_input = self.x_train.shape[1]
+        self.dim_label = self.y_train.shape[1]
+
+        self.inputs = Input(shape=(self.dim_input,), dtype=self.floatx)
+
         self.model = None
+        self.model_ensemble = None
         self.history = None
         self.callbacks_list = None
         self.vsplit = None
         self.predict = None
 
     def composeResnetModel(self, n_neurons=200, blocks=2, drop1=0.1, loss='mse', optimizer='adam', batch_norm=False):
-
         print('set up ANN')
-        floatx = 'float32'
-        K.set_floatx(floatx)
+
         # ANN parameters
-        dim_input = self.x_train.shape[1]
-        dim_label = self.y_train.shape[1]
+        # dim_input = self.x_train.shape[1]
+        # dim_label = self.y_train.shape[1]
 
         # This returns a tensor
-        inputs = Input(shape=(dim_input,), dtype=floatx)
+        # self.inputs = Input(shape=(dim_input,), dtype=floatx)
 
-        print(inputs.dtype)
+        print(self.inputs.dtype)
         # a layer instance is callable on a tensor, and returns a tensor
-        x = Dense(n_neurons, name='1_base')(inputs)
+        x = Dense(n_neurons, name='1_base')(self.inputs)
         # x = BatchNormalization(axis=-1, name='1_base_bn')(x)
         x = Activation('relu')(x)
 
@@ -382,14 +387,34 @@ class combustionML(object):
         # x = res_block(x, n_neurons, stage=1, block=ascii_lowercase[b], d1=drop1, bn=batch_norm)
             x = res_block(x, n_neurons, stage=1, block=str(b), d1=drop1, bn=batch_norm)
 
-        predictions = Dense(dim_label, activation='linear')(x)
+        predictions = Dense(self.dim_label, activation='linear')(x)
 
-        self.model = Model(inputs=inputs, outputs=predictions)
+        self.model = Model(inputs=self.inputs, outputs=predictions)
 
         self.model.compile(loss=loss, optimizer=optimizer, metrics=['accuracy'])
 
-        # checkpoint (save the best model based validate loss)
-        filepath = "./tmp/weights.best.cntk.hdf5"
+
+    def res_reg_model(self, model_input,id, n_neurons=200, blocks=2, drop1=0.1, batch_norm=False):
+        print('set up ANN :', model_input.dtype)
+
+        # a layer instance is callable on a tensor, and returns a tensor
+        x = Dense(n_neurons, name='1_base'+id)(model_input)
+        # x = BatchNormalization(axis=-1, name='1_base_bn')(x)
+        x = Activation('relu')(x)
+
+        for b in range(blocks):
+            x = res_block(x, n_neurons, stage=1, block=str(b)+id, d1=drop1, bn=batch_norm)
+
+        predictions = Dense(self.dim_label, activation='linear')(x)
+
+        model = Model(inputs=model_input, outputs=predictions)
+
+        return model
+
+
+    def fitModel(self, batch_size=1024, epochs=200, vsplit=0.1, sfl=True):
+        self.vsplit = vsplit
+        filepath = "./tmp/weights.best.hdf5"
         checkpoint = ModelCheckpoint(filepath,
                                      monitor='val_loss',
                                      verbose=1,
@@ -397,10 +422,6 @@ class combustionML(object):
                                      mode='min',
                                      period=5)
         self.callbacks_list = [checkpoint]
-
-    def fitModel(self, batch_size=1024, epochs=200, vsplit=0.1, sfl=True):
-
-        self.vsplit = vsplit
         self.history = self.model.fit(
             self.x_train, self.y_train,
             epochs=epochs,
@@ -411,11 +432,10 @@ class combustionML(object):
             shuffle=sfl)
 
     def prediction(self):
-
-        # self.model.load_weights("./tmp/weights.best.cntk.hdf5")
+        self.model.save_weights("./tmp/weights.last.hdf5")
+        self.model.load_weights("./tmp/weights.best.hdf5")
 
         predict = self.model.predict(self.x_test.values)
-        # predict = data_inverse(predict, self.scaling_case, self.norm_y, self.std_y)
         predict = self.y_scaling.inverse_transform(predict)
         self.predict = pd.DataFrame(data=predict, columns=self.df_y_target.columns)
 
@@ -423,9 +443,37 @@ class combustionML(object):
         print(R2_score)
         return R2_score
 
+    def ensemble(self):
+        # model_input = Input(shape=(self.dim_input,), dtype=self.floatx)
+        model_input = self.inputs
+
+        model2 = self.res_reg_model(model_input,'a', n_neurons=200, blocks=2, drop1=0)
+        model2.load_weights("./tmp/weights.best.hdf5")
+
+        model4 = self.res_reg_model(model_input,'b', n_neurons=200, blocks=2, drop1=0)
+        model4.load_weights("./tmp/weights.last.hdf5")
+
+        # outputs = [model2.outputs[0],
+        #            model4.outputs[0]]
+        models = [model2, model4]
+        outputs = [model.outputs[0] for model in models]
+        y = Average()(outputs)
+
+        self.model_ensemble = Model(inputs=model_input, outputs=y, name='ensemble')
+
     def inference(self, x):
         tmp = self.x_scaling.transform(x)
         predict = self.model.predict(tmp)
+        # inverse for out put
+        out = self.y_scaling.inverse_transform(predict)
+        # eliminate negative values
+        out[out < 0] = 0
+
+        return out
+
+    def inference_ensemble(self, x):
+        tmp = self.x_scaling.transform(x)
+        predict = self.model_ensemble.predict(tmp)
         # inverse for out put
         out = self.y_scaling.inverse_transform(predict)
         # eliminate negative values
@@ -460,9 +508,6 @@ class combustionML(object):
         plt.title(sp + ' nn: r2 = ' + str(r2_n))
         plt.show()
 
-
-
-    # loss
     def plt_loss(self):
         plt.semilogy(self.history.history['loss'])
         if self.vsplit:
@@ -477,12 +522,15 @@ class combustionML(object):
         print(hyper)
         sgd = optimizers.SGD(lr=0.3, decay=1e-3, momentum=0.9, nesterov=True)
         rms = optimizers.RMSprop(lr=0.001, rho=0.9, epsilon=None, decay=0.0)
-        adam = optimizers.Adam(lr=0.001, beta_1=0.9, beta_2=0.999, epsilon=None, decay=0.0, amsgrad=True)
+        adam = optimizers.Adam(lr=0.001, beta_1=0.9, beta_2=0.999,
+                               epsilon=None, decay=0.0, amsgrad=True)
         self.composeResnetModel(n_neurons=hyper[0], blocks=hyper[1], drop1=hyper[2],
                                 optimizer=adam, loss='mae',batch_norm=False)
-        self.fitModel(epochs=8000, batch_size=1024 * 8, vsplit=0.1, sfl=False)
+        self.fitModel(epochs=400, batch_size=1024 * 8, vsplit=0.1, sfl=True)
+        r2 = self.prediction()
+        self.ensemble()
 
-        return self.prediction()
+        return r2
 
 
 if __name__ == "__main__":

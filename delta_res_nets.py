@@ -16,8 +16,8 @@ if __name__ == '__main__':
     # load training
     df_x, df_y = pickle.load(open('data/x_y_org.p', 'rb'))
     columns = df_x.columns
-    train_features = columns.drop(['f', 'dt'])
-    # train_features = columns.drop(['f'])
+    # train_features = columns.drop(['f', 'dt'])
+    train_features = columns.drop(['f','N2'])
 
     # initial conditions
     n_H2 = sorted(list(map(float,set(df_x['f']))))
@@ -38,8 +38,8 @@ if __name__ == '__main__':
     res = res_dict['y/x']
 
     # species = ['O']
-    # species = train_features.drop(['dt'])
-    species = train_features
+    # species = train_features
+    species = train_features.drop(['dt'])
 
     target = pd.DataFrame(res[species], columns=species)
     outlier = 1.2
@@ -63,10 +63,15 @@ if __name__ == '__main__':
     r2 = nn_std.run([200, 2, 0.])
     nn_std.plt_loss()
 
+
     # %%
     # test
-    # post_species = {'O','O2'}
-    post_species = species
+    ensemble_mode = True
+    # ensemble_mode = False
+    # post_species = species
+    # post_species = {'T'}
+    post_species = species.drop(['cp', 'Hs', 'T', 'Rho'])
+
     ini_T = 1501
     for sp in post_species.intersection(species):
         for n in [13]:
@@ -74,8 +79,13 @@ if __name__ == '__main__':
             # input['C'] = tot(input, 'C')
             # input['tot:O'] = tot(input, 'O')
             # input['tot:H'] = tot(input, 'H')
-            input = input.drop(['dt'], axis=1)
-            pred = pd.DataFrame(nn_std.inference(input), columns=target.columns)
+            input = input.drop(['N2'], axis=1)
+            # input = input.drop(['N2', 'dt'], axis=1)
+            if ensemble_mode is True:
+                pred = pd.DataFrame(nn_std.inference_ensemble(input), columns=target.columns)
+            else:
+                pred = pd.DataFrame(nn_std.inference(input), columns=target.columns)
+
             model_pred = pred
             pred = pred * input
 
@@ -106,25 +116,37 @@ if __name__ == '__main__':
             # input['C'] = tot(input, 'C')
             # input['tot:O'] = tot(input, 'O')
             # input['tot:H'] = tot(input, 'H')
-            input = input.drop(['dt'], axis=1)
-            init = 100
+            input = input.drop(['N2'], axis=1)
+            test = test.drop(['N2'], axis=1)
+            # input = input.drop(['N2', 'dt'], axis=1)
+            # test = test.drop(['N2', 'dt'], axis=1)
+            init = 50
             input_model = input.values[init].reshape(1, -1)
-            pred = input_model
-            for i in range(input.shape[0]-(init+1)):
-                pred_model = nn_std.inference(input_model)
-                pred = np.vstack((pred, input_model * pred_model))
-                input_model = input_model * pred_model
-            pred = pd.DataFrame(pred, columns=target.columns)
+            test_model = test.values[init].reshape(1, -1)
+            pred = test_model
+            # for i in range(input.shape[0] - (init + 1)):
+            #     pred_model = nn_std.inference(input_model)
+            #     pred = np.vstack((pred, input_model * pred_model))
+            #     input_model = input_model * pred_model
+            for i in range(input.shape[0] - (init + 1)):
+
+                if ensemble_mode is True:
+                    pred_model = nn_std.inference_ensemble(input_model)
+                else:
+                    pred_model = nn_std.inference(input_model)
+
+                input_model[0][:-1] = input_model[0][:-1] * pred_model
+                input_model[0][-1] = 1e-6
+                pred = np.vstack((pred, input_model))
+
+            pred = pd.DataFrame(pred, columns=train_features)
 
             f, axarr = plt.subplots(1, 2)
             axarr[0].plot(test[sp].values[init:],'bd', ms=2)
             axarr[0].plot(pred[sp], 'rd', ms=2)
-            axarr[0].set_title(str(n) + ':' + sp)
-
-            # axarr[1].plot(pred[sp], 'rd', ms=2)
 
             axarr[1].plot(abs(test[sp].values[init:] - pred[sp]) / test[sp].values[init:], 'k')
             # axarr[1].set_ylim(-0.005, 0.005)
-            # axarr[1].set_title(str(n) + '_' + sp)
+            f.suptitle('Intigration: '+str(n) + '_' + sp)
             plt.savefig('fig/acc_' + str(n) + '_' + sp)
             plt.show()

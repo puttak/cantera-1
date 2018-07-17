@@ -45,6 +45,7 @@ def test_data(temp, n_fuel, columns):
 
     # ode_o = ode_o.drop('N2', axis=1)
     ode_o = ode_o.drop('f', axis=1)
+    ode_n = ode_n.drop('f', axis=1)
 
     return ode_o, ode_n
 
