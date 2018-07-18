@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import pickle
+import time
 
 import pandas as pd
 from deltaNets import combustionML
@@ -8,7 +9,7 @@ from boost_test import test_data, tot, create_data
 
 if __name__ == '__main__':
     # %%
-    # create_data()
+    create_data()
     # load training
     df_x, df_y = pickle.load(open('data/x_y_org.p', 'rb'))
     columns = df_x.columns
@@ -16,7 +17,7 @@ if __name__ == '__main__':
     train_features = columns.drop(['f','N2'])
 
     # initial conditions
-    n_H2 = sorted(list(map(float,set(df_x['f']))))
+    n_H2 = sorted(list(map(float, set(df_x['f']))))
     n_H2 = np.asarray(n_H2).reshape(-1, 1)
 
     df_x = df_x[train_features]
@@ -57,11 +58,12 @@ if __name__ == '__main__':
     # nn_std = combustionML(df_x, target, {'x': 'std2', 'y': 'std2'})
     nn_std = combustionML(df_x, target, {'x': 'log', 'y': 'log'})
 
-    r2 = nn_std.run([200, 2, 0.])
+    r2 = nn_std.run([400, 2, 0., 8000])
     nn_std.plt_loss()
 
     # %%
     # test
+    batch_predict = 1024*256
     ensemble_mode = True
     # ensemble_mode = False
 
@@ -79,7 +81,7 @@ if __name__ == '__main__':
             input = input.drop(['N2'], axis=1)
             # input = input.drop(['N2', 'dt'], axis=1)
             if ensemble_mode is True:
-                pred = pd.DataFrame(nn_std.inference_ensemble(input), columns=target.columns)
+                pred = pd.DataFrame(nn_std.inference_ensemble(input,batch_size=batch_predict), columns=target.columns)
             else:
                 pred = pd.DataFrame(nn_std.inference(input), columns=target.columns)
 
@@ -105,7 +107,7 @@ if __name__ == '__main__':
             ax2.set_ylim(0.8, 1.2)
             plt.savefig('fig/' + str(n) + '_' + sp)
             plt.show()
-
+#%%
     for sp in post_species.intersection(species):
         for n in [13]:
             input, test = test_data(ini_T, n, columns)
@@ -127,7 +129,7 @@ if __name__ == '__main__':
             for i in range(input.shape[0] - (init + 1)):
 
                 if ensemble_mode is True:
-                    pred_model = nn_std.inference_ensemble(input_model)
+                    pred_model = nn_std.inference_ensemble(input_model,batch_size=batch_predict)
                 else:
                     pred_model = nn_std.inference(input_model)
 
@@ -147,3 +149,12 @@ if __name__ == '__main__':
             plt.savefig('fig/acc_' + str(n) + '_' + sp)
             plt.show()
 
+    #%%
+
+    # a = nn_std.inference_ensemble(df_x, batch_size=batch_predict)
+    test_all = df_x
+    test_all = df_x.astype('float32').values
+    t_start = time.time()
+    a = nn_std.inference_ensemble(test_all, batch_size=1024*256)
+    t_end = time.time()
+    print(" %8.3f seconds" % (t_end - t_start))

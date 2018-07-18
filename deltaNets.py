@@ -10,7 +10,10 @@ from sklearn.cluster import KMeans
 import os
 
 os.environ['KERAS_BACKEND'] = 'tensorflow'
+# os.environ['KERAS_BACKEND'] = 'cntk'
+
 from keras import backend as K
+
 
 K.set_floatx('float32')
 print("precision: " + K.floatx())
@@ -358,6 +361,7 @@ class combustionML(object):
         self.inputs = Input(shape=(self.dim_input,), dtype=self.floatx)
 
         self.model = None
+        self.ensemble_num = 4
         self.model_ensemble = None
         self.history = None
         self.callbacks_list = None
@@ -394,7 +398,7 @@ class combustionML(object):
 
         return model
 
-    def fitModel(self, batch_size=1024, epochs=200, vsplit=0.1, sfl=True):
+    def fitModel(self, batch_size=1024, epochs=200, vsplit=0.1, sfl=True, ensemble_num=4):
         self.vsplit = vsplit
 
         filepath = "./tmp/history/weights.improvement_{val_loss:.4f}_.hdf5"
@@ -420,7 +424,8 @@ class combustionML(object):
             name = fl.split('_')
             names.append(float(name[1]))
         names.sort()
-        for i in range(4):
+        self.ensemble_num = min(ensemble_num,len(names))
+        for i in range(self.ensemble_num):
             a = name[0] + '_' + format(names[i], '.4f') + '_' + name[2]
             print(a)
             os.rename('./tmp/history/' + a, './tmp/weights_' + str(i) + '.hdf5')
@@ -437,31 +442,26 @@ class combustionML(object):
         print(R2_score)
         return R2_score
 
-    def ensemble(self):
-        model_input = self.inputs
-
-        model_1 = self.res_reg_model(model_input, 'a', n_neurons=200, blocks=2, drop1=0)
-        model_2 = self.res_reg_model(model_input, 'b', n_neurons=200, blocks=2, drop1=0)
-        model_3 = self.res_reg_model(model_input, 'c', n_neurons=200, blocks=2, drop1=0)
-        model_4 = self.res_reg_model(model_input, 'd', n_neurons=200, blocks=2, drop1=0)
-
-        model_last = self.res_reg_model(model_input, 'last', n_neurons=200, blocks=2, drop1=0)
+    def ensemble(self,n_neurons=200, blocks=2, drop1=.0):
+        model_last = self.res_reg_model(self.inputs, 'last', n_neurons=n_neurons, blocks=blocks, drop1=drop1)
         model_last.load_weights("./tmp/weights.last.hdf5")
 
-        model_1.load_weights("./tmp/weights_0.hdf5")
-        model_2.load_weights("./tmp/weights_1.hdf5")
-        model_3.load_weights("./tmp/weights_2.hdf5")
-        model_4.load_weights("./tmp/weights_3.hdf5")
+        models = []
+        models.append(model_last)
 
-        models = [model_1, model_2, model_3, model_4, model_last]
+        for i in range(self.ensemble_num):
+            model = self.res_reg_model(self.inputs, str(i), n_neurons=n_neurons, blocks=blocks, drop1=drop1)
+            model.load_weights("./tmp/weights_"+str(i)+".hdf5")
+            models.append(model)
+
         outputs = [model.outputs[0] for model in models]
         y = Average()(outputs)
 
-        self.model_ensemble = Model(inputs=model_input, outputs=y, name='ensemble')
+        self.model_ensemble = Model(inputs=self.inputs, outputs=y, name='ensemble')
 
     def inference(self, x):
         tmp = self.x_scaling.transform(x)
-        predict = self.model.predict(tmp)
+        predict = self.model.predict(tmp, batch_size=1024 * 8 * 2)
         # inverse for out put
         out = self.y_scaling.inverse_transform(predict)
         # eliminate negative values
@@ -469,9 +469,9 @@ class combustionML(object):
 
         return out
 
-    def inference_ensemble(self, x):
+    def inference_ensemble(self, x,batch_size=1204):
         tmp = self.x_scaling.transform(x)
-        predict = self.model_ensemble.predict(tmp)
+        predict = self.model_ensemble.predict(tmp, batch_size=batch_size)
         # inverse for out put
         out = self.y_scaling.inverse_transform(predict)
         # eliminate negative values
@@ -522,11 +522,15 @@ class combustionML(object):
         rms = optimizers.RMSprop(lr=0.001, rho=0.9, epsilon=None, decay=0.0)
         adam = optimizers.Adam(lr=0.001, beta_1=0.9, beta_2=0.999,
                                epsilon=None, decay=0.0, amsgrad=True)
+
         self.composeResnetModel(n_neurons=hyper[0], blocks=hyper[1], drop1=hyper[2],
                                 optimizer=adam, loss='mae', batch_norm=False)
-        self.fitModel(epochs=4000, batch_size=1024 * 8, vsplit=0.1, sfl=True)
+
+        self.fitModel(epochs=hyper[3], batch_size=1024 * 8, vsplit=0.1,
+                      sfl=True,ensemble_num=5)
+
         r2 = self.prediction()
-        self.ensemble()
+        self.ensemble(n_neurons=hyper[0], blocks=hyper[1], drop1=hyper[2])
 
         return r2
 

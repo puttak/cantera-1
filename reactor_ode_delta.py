@@ -46,7 +46,7 @@ def ignite_f(ini):
     t_end = 1e-3
 
     # dt_dict = [5e-7, 7e-7, 1e-6, 1.5e-6]
-    dt_dict = [0.8e-6, 1e-6]
+    dt_dict = [0.8e-6, 1e-6, 1.2e-6]
     # dt_dict = [8e-7,1e-6,1.2e-6]
     for dt in dt_dict:
         if fuel == 'H2':
@@ -65,13 +65,14 @@ def ignite_f(ini):
         solver.set_integrator('vode', method='bdf', with_jacobian=True)
         # solver.set_initial_value(y0, 0.0)
         solver.set_initial_value(x0, 0.0)
-
+        dt_base = dt
         while solver.successful() and solver.t < t_end:
 
             if solver.t == 0:
                 dt_ini = np.random.random_sample() * 1e-6
                 solver.integrate(solver.t + dt_ini)
 
+            dt = dt_base * (0.9+0.2*np.random.random())
             state_org = np.hstack(
                 [gas[gas.species_names].X, np.dot(gas.partial_molar_enthalpies, gas[gas.species_names].X),
                  gas.T, gas.density, gas.cp, dt, n_fuel])
