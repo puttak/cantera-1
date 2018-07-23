@@ -17,10 +17,11 @@ def create_data():
     T = np.random.rand(20) * 1000 + 1001
     # n_s = np.random.rand(20) * 10 + 0.1
     # n_l = np.random.rand(30) * 30
-    n_s = np.linspace(0, 8, 20)
+    n_s = np.linspace(0, 8, 30)
     n_l = np.linspace(0, 30, 30)
 
     n = np.unique(np.concatenate((n_s, n_l)))[1:]
+    n=n[n>0.4]
     XX, YY = np.meshgrid(T, n)
     ini = np.concatenate((XX.reshape(-1, 1), YY.reshape(-1, 1)), axis=1)
 

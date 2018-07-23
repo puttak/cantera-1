@@ -521,13 +521,13 @@ class combustionML(object):
         sgd = optimizers.SGD(lr=0.3, decay=1e-3, momentum=0.9, nesterov=True)
         rms = optimizers.RMSprop(lr=0.001, rho=0.9, epsilon=None, decay=0.0)
         adam = optimizers.Adam(lr=0.001, beta_1=0.9, beta_2=0.999,
-                               epsilon=None, decay=0.0, amsgrad=True)
+                               epsilon=1e-8, decay=0.0, amsgrad=True)
 
         self.composeResnetModel(n_neurons=hyper[0], blocks=hyper[1], drop1=hyper[2],
                                 optimizer=adam, loss='mae', batch_norm=False)
 
-        self.fitModel(epochs=hyper[3], batch_size=1024 * 8, vsplit=0.1,
-                      sfl=True,ensemble_num=5)
+        self.fitModel(epochs=hyper[3], batch_size=1024 * 8 , vsplit=0.2,
+                      sfl=False,ensemble_num=5)
 
         r2 = self.prediction()
         self.ensemble(n_neurons=hyper[0], blocks=hyper[1], drop1=hyper[2])

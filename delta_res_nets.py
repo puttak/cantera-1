@@ -9,7 +9,7 @@ from boost_test import test_data, tot, create_data
 
 if __name__ == '__main__':
     # %%
-    create_data()
+    # create_data()
     # load training
     df_x, df_y = pickle.load(open('data/x_y_org.p', 'rb'))
     columns = df_x.columns
@@ -58,14 +58,17 @@ if __name__ == '__main__':
     # nn_std = combustionML(df_x, target, {'x': 'std2', 'y': 'std2'})
     nn_std = combustionML(df_x, target, {'x': 'log', 'y': 'log'})
 
-    r2 = nn_std.run([400, 2, 0., 8000])
-    nn_std.plt_loss()
+    # r2 = nn_std.run([800, 2, 0., 2000])
+    # nn_std.plt_loss()
+    nn_std.ensemble_num=10
+    nn_std.ensemble(800,2,0.)
+
 
     # %%
     # test
     batch_predict = 1024*256
-    ensemble_mode = True
-    # ensemble_mode = False
+    # ensemble_mode = True
+    ensemble_mode = False
 
     # post_species = {'T'}
     # post_species = species
@@ -73,7 +76,7 @@ if __name__ == '__main__':
 
     ini_T = 1501
     for sp in post_species.intersection(species):
-        for n in [13]:
+        for n in [3]:
             input, test = test_data(ini_T, n, columns)
             # input['C'] = tot(input, 'C')
             # input['tot:O'] = tot(input, 'O')
@@ -109,7 +112,7 @@ if __name__ == '__main__':
             plt.show()
 #%%
     for sp in post_species.intersection(species):
-        for n in [13]:
+        for n in [3]:
             input, test = test_data(ini_T, n, columns)
             # input['C'] = tot(input, 'C')
             # input['tot:O'] = tot(input, 'O')
@@ -155,6 +158,6 @@ if __name__ == '__main__':
     test_all = df_x
     test_all = df_x.astype('float32').values
     t_start = time.time()
-    a = nn_std.inference_ensemble(test_all, batch_size=1024*256)
+    a = nn_std.inference_ensemble(test_all, batch_size=1024*32)
     t_end = time.time()
     print(" %8.3f seconds" % (t_end - t_start))
