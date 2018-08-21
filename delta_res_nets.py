@@ -10,9 +10,16 @@ from boost_test import test_data, tot, create_data
 if __name__ == '__main__':
     # %%
     # create_data()
+
     # load training
     df_x, df_y = pickle.load(open('data/x_y_org.p', 'rb'))
     columns = df_x.columns
+
+    df_x_new, df_y_new = pickle.load(open('data/x_y_org_new.p', 'rb'))
+    df_x = df_x.append(df_x_new, ignore_index=True)
+    df_y = df_y.append(df_y_new, ignore_index=True)
+
+
     # train_features = columns.drop(['f', 'dt'])
     train_features = columns.drop(['f','N2'])
 
@@ -44,7 +51,7 @@ if __name__ == '__main__':
     idx = (target < outlier).all(1)
     out_ratio = idx.sum() / target.shape[0]
 
-    target = target.loc[idx]
+    target_train = target.loc[idx]
     df_x = df_x.loc[idx]
 
     # add new features
@@ -56,12 +63,13 @@ if __name__ == '__main__':
     # model formulate
     # nn_std = combustionML(df_x, target, {'x': 'log_std', 'y': 'log_std'})
     # nn_std = combustionML(df_x, target, {'x': 'std2', 'y': 'std2'})
-    nn_std = combustionML(df_x, target, {'x': 'log', 'y': 'log'})
+    nn_std = combustionML(df_x, target_train, {'x': 'log', 'y': 'log'})
 
-    # r2 = nn_std.run([800, 2, 0., 2000])
-    # nn_std.plt_loss()
-    nn_std.ensemble_num=10
-    nn_std.ensemble(800,2,0.)
+    r2 = nn_std.run([200, 2, 0., 100])
+
+    nn_std.plt_loss()
+    # nn_std.ensemble_num=10
+    # nn_std.ensemble(800,2,0.)
 
 
     # %%
@@ -153,6 +161,7 @@ if __name__ == '__main__':
             plt.show()
 
     #%%
+
 
     # a = nn_std.inference_ensemble(df_x, batch_size=batch_predict)
     test_all = df_x

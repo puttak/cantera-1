@@ -47,7 +47,7 @@ def ignite_f(ini):
 
     # dt_dict = [5e-7, 7e-7, 1e-6, 1.5e-6]
     # dt_dict = [0.8e-6, 1e-6, 1.2e-6]
-    dt_dict = [1e-6,1e-6]
+    dt_dict = [1e-6,1e-6,1e-6]
     for dt in dt_dict:
         if fuel == 'H2':
             # gas = ct.Solution('./data/Boivin_newTherm.cti')
