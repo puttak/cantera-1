@@ -19,7 +19,7 @@ K.set_floatx('float32')
 print("precision: " + K.floatx())
 # os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
-from keras.models import Model
+from keras.models import Model, clone_model
 from keras.layers import Dense, Input, BatchNormalization, Activation, Dropout, Average
 from keras.callbacks import ModelCheckpoint
 from keras import optimizers
@@ -339,7 +339,7 @@ class combustionML(object):
 
     def __init__(self, df_x_input, df_y_target, scaling_case):
         x_train, x_test, y_train, y_test = model_selection.train_test_split(df_x_input, df_y_target,
-                                                                            test_size=0.001,
+                                                                            test_size=0.1,
                                                                             random_state=42)
 
         self.x_scaling = dataScaling()
@@ -368,6 +368,7 @@ class combustionML(object):
         self.vsplit = None
         self.predict = None
 
+
     def composeResnetModel(self, n_neurons=200, blocks=2, drop1=0.1, loss='mse', optimizer='adam', batch_norm=False):
         print('set up ANN :', self.inputs.dtype)
         # a layer instance is callable on a tensor, and returns a tensor
@@ -381,7 +382,9 @@ class combustionML(object):
         predictions = Dense(self.dim_label, activation='linear')(x)
 
         self.model = Model(inputs=self.inputs, outputs=predictions)
+        # self.model = model
         self.model.compile(loss=loss, optimizer=optimizer, metrics=['accuracy'])
+
 
     def res_reg_model(self, model_input, id, n_neurons=200, blocks=2, drop1=0.1, batch_norm=False):
         print('set up ANN :', model_input.dtype)
@@ -419,6 +422,8 @@ class combustionML(object):
             callbacks=self.callbacks_list,
             shuffle=sfl)
 
+        self.model.save_weights("./tmp/weights.last.hdf5")
+
         names = []
         for fl in os.listdir('./tmp/history'):
             name = fl.split('_')
@@ -431,8 +436,8 @@ class combustionML(object):
             os.rename('./tmp/history/' + a, './tmp/weights_' + str(i) + '.hdf5')
 
     def prediction(self):
-        self.model.save_weights("./tmp/weights.last.hdf5")
-        # self.model.load_weights("./tmp/weights.best.hdf5")
+        # self.model.save_weights("./tmp/weights.last.hdf5")
+        self.model.load_weights("./tmp/weights_0.hdf5")
 
         predict = self.model.predict(self.x_test.values)
         predict = self.y_scaling.inverse_transform(predict)
@@ -443,7 +448,23 @@ class combustionML(object):
         return R2_score
 
     def ensemble(self,n_neurons=200, blocks=2, drop1=.0):
-        model_last = self.res_reg_model(self.inputs, 'last', n_neurons=n_neurons, blocks=blocks, drop1=drop1)
+        model_last = self.res_reg_model(self.inputs, '_last_', n_neurons=n_neurons, blocks=blocks, drop1=drop1)
+        # model_last = clone_model(self.model, input_tensors=self.inputs)
+        # model_input = self.inputs
+        # model_input.name = 'last'
+        for layer in model_last.layers:
+            print(layer.name)
+        print('self.model')
+        for layer in self.model.layers:
+            print(layer.name)
+        a = clone_model(self.model)
+        print('clone')
+        for layer in a.layers:
+            print(layer.name)
+
+
+        # model_last = clone_model(self.model, Input(shape=(self.dim_input,), dtype=self.floatx))
+        # model_last.layers[1].name = 'last'
         model_last.load_weights("./tmp/weights.last.hdf5")
 
         models = []
@@ -451,6 +472,7 @@ class combustionML(object):
 
         for i in range(self.ensemble_num):
             model = self.res_reg_model(self.inputs, str(i), n_neurons=n_neurons, blocks=blocks, drop1=drop1)
+            # model = clone_model(self.model,input_tensors=self.inputs)
             model.load_weights("./tmp/weights_"+str(i)+".hdf5")
             models.append(model)
 
@@ -458,6 +480,9 @@ class combustionML(object):
         y = Average()(outputs)
 
         self.model_ensemble = Model(inputs=self.inputs, outputs=y, name='ensemble')
+        for layer in self.model_ensemble.layers:
+            print(layer.name)
+        self.model.load_weights("./tmp/weights_0.hdf5")
 
     def inference(self, x):
         tmp = self.x_scaling.transform(x)
@@ -523,14 +548,19 @@ class combustionML(object):
         adam = optimizers.Adam(lr=0.001, beta_1=0.9, beta_2=0.999,
                                epsilon=1e-8, decay=0.0, amsgrad=True)
 
-        self.composeResnetModel(n_neurons=hyper[0], blocks=hyper[1], drop1=hyper[2],
-                                optimizer=adam, loss='mae', batch_norm=False)
+        # self.composeResnetModel(n_neurons=hyper[0], blocks=hyper[1], drop1=hyper[2],
+        #                         optimizer=adam, loss='mae', batch_norm=False)
+        self.model = self.res_reg_model(self.inputs,'_base_',n_neurons=hyper[0],
+                                        blocks=hyper[1], drop1=hyper[2], batch_norm=False)
 
-        self.fitModel(epochs=hyper[3], batch_size=1024 * 8 , vsplit=0.2,
-                      sfl=False,ensemble_num=5)
+        self.model.compile(loss='mae', optimizer=adam, metrics=['accuracy'])
 
-        r2 = self.prediction()
+        self.fitModel(epochs=hyper[3], batch_size=1024 * 8, vsplit=0.2,
+                      sfl=False, ensemble_num=self.ensemble_num)
+
+
         self.ensemble(n_neurons=hyper[0], blocks=hyper[1], drop1=hyper[2])
+        r2 = self.prediction()
 
         return r2
 

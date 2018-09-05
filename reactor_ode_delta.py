@@ -47,7 +47,7 @@ def ignite_f(ini):
 
     # dt_dict = [5e-7, 7e-7, 1e-6, 1.5e-6]
     # dt_dict = [0.8e-6, 1e-6, 1.2e-6]
-    dt_dict = [1e-6,1e-6,1e-6]
+    dt_dict = [1e-6]
     for dt in dt_dict:
         if fuel == 'H2':
             # gas = ct.Solution('./data/Boivin_newTherm.cti')
@@ -72,7 +72,7 @@ def ignite_f(ini):
                 dt_ini = np.random.random_sample() * 1e-6
                 solver.integrate(solver.t + dt_ini)
 
-            dt = dt_base * (0.9+round(0.2*np.random.random(),2))
+            dt = dt_base * (0.8+round(0.4*np.random.random(),2))
             state_org = np.hstack(
                 [gas[gas.species_names].X, np.dot(gas.partial_molar_enthalpies, gas[gas.species_names].X),
                  gas.T, gas.density, gas.cp, dt, n_fuel])

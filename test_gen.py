@@ -43,6 +43,7 @@ def one_step_pro(ini):
     for temp_org, Y_org, dt_org in zip(temp, Y_ini, dt):
         gas.TP = temp_org, P
         gas.X = Y_org
+        # gas.Y = Y_org
 
         # y0 = np.hstack((gas.T, gas.Y))
         x0 = np.hstack((gas.T, gas.X))
@@ -81,7 +82,7 @@ def one_step_data_gen(df, fuel):
     T = df['T']
 
     dt_base = 1e-6
-    dt = dt_base * (0.9 + np.round(0.2 * np.random.random(df.shape[0]), 2))
+    dt = dt_base * (0.8 + np.round(0.4 * np.random.random(df.shape[0]), 2))
 
     ini = [(a, b, c) for a, b, c in zip(np.array_split(T.values, mp.cpu_count()),
                                   np.array_split(Y_sp.values, mp.cpu_count()),
@@ -122,7 +123,9 @@ def one_step_data_gen(df, fuel):
 
 if __name__ == '__main__':
 
-    new_test = pickle.load(open('data/test_griddata.p', 'rb'))
+    # new_test = pickle.load(open('data/test_griddata.p', 'rb'))
+    new_test = pickle.load(open('data/test_random_delta.p', 'rb'))
+
 
     gas = ct.Solution('./data/h2_sandiego.cti')
 
