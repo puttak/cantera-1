@@ -42,28 +42,29 @@ def one_step_pro(ini):
     # gas.TPX = temp, P, fuel + ':' + str(n_fuel) + ',O2:1,N2:4'
     for temp_org, Y_org, dt_org in zip(temp, Y_ini, dt):
         gas.TP = temp_org, P
-        gas.X = Y_org
+        # gas.X = Y_org
         # gas.Y = Y_org
+        gas.concentrations = Y_org
 
-        # y0 = np.hstack((gas.T, gas.Y))
-        x0 = np.hstack((gas.T, gas.X))
+        y0 = np.hstack((gas.T, gas.Y))
+        # x0 = np.hstack((gas.T, gas.X))
         ode = ReactorOde(gas)
         solver = scipy.integrate.ode(ode)
         solver.set_integrator('vode', method='bdf', with_jacobian=True)
-        # solver.set_initial_value(y0, 0.0)
-        solver.set_initial_value(x0, 0.0)
+        solver.set_initial_value(y0, 0.0)
+        # solver.set_initial_value(x0, 0.0)
 
         state_org = np.hstack(
-            [gas[gas.species_names].X, np.dot(gas.partial_molar_enthalpies, gas[gas.species_names].X),
+            [gas[gas.species_names].concentrations, np.dot(gas.partial_molar_enthalpies, gas[gas.species_names].X),
              gas.T, gas.density, gas.cp, dt_org, 0])
 
         solver.integrate(solver.t + dt_org)
-        # gas.TPY = solver.y[0], P, solver.y[1:]
-        gas.TPX = solver.y[0], P, solver.y[1:]
+        gas.TPY = solver.y[0], P, solver.y[1:]
+        # gas.TPX = solver.y[0], P, solver.y[1:]
 
         # Extract the state of the reactor
         state_new = np.hstack(
-            [gas[gas.species_names].X, np.dot(gas.partial_molar_enthalpies, gas[gas.species_names].X),
+            [gas[gas.species_names].concentrations, np.dot(gas.partial_molar_enthalpies, gas[gas.species_names].X),
              gas.T, gas.density, gas.cp, dt_org, 0])
 
         # Update the sample
@@ -85,10 +86,8 @@ def one_step_data_gen(df, fuel):
     dt = dt_base * (0.8 + np.round(0.4 * np.random.random(df.shape[0]), 2))
 
     ini = [(a, b, c) for a, b, c in zip(np.array_split(T.values, mp.cpu_count()),
-                                  np.array_split(Y_sp.values, mp.cpu_count()),
-                                  np.array_split(dt, mp.cpu_count()))]
-
-
+                                        np.array_split(Y_sp.values, mp.cpu_count()),
+                                        np.array_split(dt, mp.cpu_count()))]
 
     print("multiprocessing:", end='')
     t_start = time.time()
@@ -122,18 +121,11 @@ def one_step_data_gen(df, fuel):
 
 
 if __name__ == '__main__':
-
+    gas = ct.Solution('./data/h2_sandiego.cti')
     # new_test = pickle.load(open('data/test_griddata.p', 'rb'))
     new_test = pickle.load(open('data/test_random_delta.p', 'rb'))
-
-
-    gas = ct.Solution('./data/h2_sandiego.cti')
-
-
-    new_test['N2'] = 1 - new_test[gas.species_names[:-1]].sum(1)
-    df_x_input_org, df_y_target_org = one_step_data_gen(new_test, 'H2')
+    # new_test['N2'] = 1 - new_test[gas.species_names[:-1]].sum(1)
+    # input_chem = new_test.sample(10000)
+    input_chem = new_test
+    df_x_input_org, df_y_target_org = one_step_data_gen(input_chem, 'H2')
     pickle.dump((df_x_input_org, df_y_target_org), open('data/x_y_org_new.p', 'wb'))
-
-
-
-

@@ -21,16 +21,16 @@ class ReactorOde(object):
         """the ODE function, y' = f(t,y) """
 
         # State vector is [T, Y_1, Y_2, ... Y_K]
-        # self.gas.set_unnormalized_mass_fractions(y[1:])
-        self.gas.set_unnormalized_mole_fractions(y[1:])
+        self.gas.set_unnormalized_mass_fractions(y[1:])
+        # self.gas.set_unnormalized_mole_fractions(y[1:])
         self.gas.TP = y[0], self.P
         rho = self.gas.density
 
         wdot = self.gas.net_production_rates
         dTdt = - (np.dot(self.gas.partial_molar_enthalpies, wdot) /
                   (rho * self.gas.cp))
-        # dYdt = wdot * self.gas.molecular_weights / rho
-        dYdt = wdot / rho
+        dYdt = wdot * self.gas.molecular_weights / rho
+        # dYdt = wdot /rho
 
         return np.hstack((dTdt, dYdt))
 
@@ -47,8 +47,12 @@ def ignite_f(ini):
 
     # dt_dict = [5e-7, 7e-7, 1e-6, 1.5e-6]
     # dt_dict = [0.8e-6, 1e-6, 1.2e-6]
-    dt_dict = [1e-6]
-    for dt in dt_dict:
+    # dt_ini_dict = [0]
+    # dt_ini_dict.extend(np.random.random(5))
+    num = 10
+    dt_ini_dict =[]
+    dt_ini_dict.extend([x/num for x in range(num)])
+    for ini in dt_ini_dict:
         if fuel == 'H2':
             # gas = ct.Solution('./data/Boivin_newTherm.cti')
             gas = ct.Solution('./data/h2_sandiego.cti')
@@ -58,33 +62,34 @@ def ignite_f(ini):
         P = ct.one_atm
 
         gas.TPX = temp, P, fuel + ':' + str(n_fuel) + ',O2:1,N2:4'
-        # y0 = np.hstack((gas.T, gas.Y))
-        x0 = np.hstack((gas.T, gas.X))
+        y0 = np.hstack((gas.T, gas.Y))
+        # x0 = np.hstack((gas.T, gas.X))
         ode = ReactorOde(gas)
         solver = scipy.integrate.ode(ode)
         solver.set_integrator('vode', method='bdf', with_jacobian=True)
-        # solver.set_initial_value(y0, 0.0)
-        solver.set_initial_value(x0, 0.0)
-        dt_base = dt
+        solver.set_initial_value(y0, 0.0)
+        # solver.set_initial_value(x0, 0.0)
+        dt_base = 1e-6
         while solver.successful() and solver.t < t_end:
 
             if solver.t == 0:
-                dt_ini = np.random.random_sample() * 1e-6
+                # dt_ini = np.random.random_sample() * 1e-6
+                dt_ini = ini * dt_base
                 solver.integrate(solver.t + dt_ini)
 
             dt = dt_base * (0.8+round(0.4*np.random.random(),2))
             state_org = np.hstack(
-                [gas[gas.species_names].X, np.dot(gas.partial_molar_enthalpies, gas[gas.species_names].X),
+                [gas[gas.species_names].concentrations, np.dot(gas.partial_molar_enthalpies, gas[gas.species_names].X),
                  gas.T, gas.density, gas.cp, dt, n_fuel])
 
             solver.integrate(solver.t + dt)
 
-            # gas.TPY = solver.y[0], P, solver.y[1:]
-            gas.TPX = solver.y[0], P, solver.y[1:]
+            gas.TPY = solver.y[0], P, solver.y[1:]
+            # gas.TPX = solver.y[0], P, solver.y[1:]
 
             # Extract the state of the reactor
             state_new = np.hstack(
-                [gas[gas.species_names].X, np.dot(gas.partial_molar_enthalpies, gas[gas.species_names].X),
+                [gas[gas.species_names].concentrations, np.dot(gas.partial_molar_enthalpies, gas[gas.species_names].X),
                  gas.T, gas.density, gas.cp, dt, n_fuel])
 
             # state_new = np.hstack([gas[gas.species_names].Y])
@@ -100,73 +105,10 @@ def ignite_f(ini):
             train_new.append(state_new)
 
             # if (abs(state_res.max() / state_org.max()) < 1e-5 and (solver.t / dt) > 200):
-            if ((res.max() < 1e-3 and (solver.t / dt) > 50)) or (gas['H2'].X < 0.005 or gas['H2'].X > 0.995):
-                # if res.max() < 1e-5:
-                break
-
-    return train_org, train_new
-
-
-def ignite_random_x(ini):
-    train_org = []
-    train_new = []
-
-    temp = ini[0]
-    n_fuel = ini[1]
-    fuel = ini[2]
-
-    dt = 1e-6
-    t_end = 1e-3
-    for dt_ini in [1e-6, 9e-7, 1.1e-6]:
-        if fuel == 'H2':
-            # gas = ct.Solution('./data/Boivin_newTherm.cti')
-            gas = ct.Solution('./data/h2_sandiego.cti')
-        if fuel == 'CH4':
-            gas = ct.Solution('./data/grimech12.cti')
-            # gas = ct.Solution('gri30.xml')
-        P = ct.one_atm
-
-        rnd = np.random.RandomState(int(n_fuel))
-        ini_x = rnd.rand(gas.X.size)
-        ini_x /= ini_x.sum()
-        gas.TPX = temp, P, ini_x
-        # y0 = np.hstack((gas.T, gas.Y))
-        x0 = np.hstack((gas.T, gas.X))
-        ode = ReactorOde(gas)
-        solver = scipy.integrate.ode(ode)
-        solver.set_integrator('vode', method='bdf', with_jacobian=True)
-        # solver.set_initial_value(y0, 0.0)
-        solver.set_initial_value(x0, 0.0)
-
-        while solver.successful() and solver.t < t_end:
-            # state_org = np.hstack([gas[gas.species_names].Y, gas.T, dt])
-            state_org = np.hstack([gas[gas.species_names].X, gas.T, dt])
-            # state_org = np.hstack([gas[gas.species_names].X, gas.T,
-            #                        np.dot(gas.partial_molar_enthalpies,gas.X)/gas.density, dt])
-
-            if solver.t == 0:
-                solver.integrate(solver.t + dt_ini)
-            solver.integrate(solver.t + dt)
-            # gas.TPY = solver.y[0], P, solver.y[1:]
-            gas.TPX = solver.y[0], P, solver.y[1:]
-
-            # Extract the state of the reactor
-            state_new = np.hstack([gas[gas.species_names].X, gas.T, dt])
-
-            # state_new = np.hstack([gas[gas.species_names].Y])
-            state_res = state_new - state_org
-            res = abs(state_res[state_org != 0] / state_org[state_org != 0])
-            # res[res==np.inf]=0
-            # res = np.nan_to_num(res)
-            # res=res[res!=0]
-            # print(res.max())
-
-            # Update the sample
-            train_org.append(state_org)
-            train_new.append(state_new)
-
-            # if (abs(state_res.max() / state_org.max()) < 1e-5 and (solver.t / dt) > 200):
-            if ((res.max() < 1e-3 and (solver.t / dt) > 50)) or (gas['H2'].Y < 0.005 or gas['H2'].Y > 0.995):
+            thres = ini*1e-2
+            if ini == 0:
+                thres = 1e-3
+            if ((res[:-3].mean() < thres and (solver.t / dt) > 50)) or (gas['H2'].X < 0.005 or gas['H2'].X > 0.995):
                 # if res.max() < 1e-5:
                 break
 
@@ -191,48 +133,63 @@ def ignite_post(ini):
     if fuel == 'CH4':
         gas = ct.Solution('./data/grimech12.cti')
         # gas = ct.Solution('gri30.xml')
-    P = ct.one_atm
-
-    gas.TPX = temp, P, fuel + ':' + str(n_fuel) + ',O2:1,N2:4'
+    # P = ct.one_atm
+    #
+    # gas.TPX = temp, P, fuel + ':' + str(n_fuel) + ',O2:1,N2:4'
     # y0 = np.hstack((gas.T, gas.Y))
-    x0 = np.hstack((gas.T, gas.X))
-    ode = ReactorOde(gas)
-    solver = scipy.integrate.ode(ode)
-    solver.set_integrator('vode', method='bdf', with_jacobian=True)
+    # # x0 = np.hstack((gas.T, gas.X))
+    # ode = ReactorOde(gas)
+    # solver = scipy.integrate.ode(ode)
+    # solver.set_integrator('vode', method='bdf', with_jacobian=True)
     # solver.set_initial_value(y0, 0.0)
-    solver.set_initial_value(x0, 0.0)
+    # solver.set_initial_value(x0, 0.0)
 
-    while solver.successful() and solver.t < t_end:
-        state_org = np.hstack(
-            [gas[gas.species_names].X, np.dot(gas.partial_molar_enthalpies, gas[gas.species_names].X),
-             gas.T, gas.density, gas.cp, dt])
+    for step_ini in [1]:
+        P = ct.one_atm
+        gas.TPX = temp, P, fuel + ':' + str(n_fuel) + ',O2:1,N2:4'
+        y0 = np.hstack((gas.T, gas.Y))
+        # x0 = np.hstack((gas.T, gas.X))
+        ode = ReactorOde(gas)
+        solver = scipy.integrate.ode(ode)
+        solver.set_integrator('vode', method='bdf', with_jacobian=True)
+        solver.set_initial_value(y0, 0.0)
+        while solver.successful() and solver.t < t_end:
 
-        solver.integrate(solver.t + dt)
-        # gas.TPY = solver.y[0], P, solver.y[1:]
-        gas.TPX = solver.y[0], P, solver.y[1:]
+            if solver.t == 0:
+                dt_ini = step_ini * 1e-7
+                solver.integrate(solver.t + dt_ini)
+                gas.TPY = solver.y[0], P, solver.y[1:]
 
-        # Extract the state of the reactor
-        state_new = np.hstack(
-            [gas[gas.species_names].X, np.dot(gas.partial_molar_enthalpies, gas[gas.species_names].X),
-             gas.T, gas.density, gas.cp, dt])
+            state_org = np.hstack(
+            [gas[gas.species_names].concentrations, np.dot(gas.partial_molar_enthalpies, gas[gas.species_names].X),
+                 gas.T, gas.density, gas.cp, dt])
 
-        # state_new = np.hstack([gas[gas.species_names].Y])
-        state_res = state_new - state_org
-        res = abs(state_res[state_org != 0] / state_org[state_org != 0])
-        # res[res==np.inf]=0
-        # res = np.nan_to_num(res)
-        # res=res[res!=0]
-        # print(res.max())
+            solver.integrate(solver.t + dt)
+            gas.TPY = solver.y[0], P, solver.y[1:]
+            # gas.TPX = solver.y[0], P, solver.y[1:]
 
-        # Update the sample
-        train_org.append(state_org)
-        train_new.append(state_new)
+            # Extract the state of the reactor
+            state_new = np.hstack(
+                [gas[gas.species_names].concentrations, np.dot(gas.partial_molar_enthalpies, gas[gas.species_names].X),
+                 gas.T, gas.density, gas.cp, dt])
 
-        # if (abs(state_res.max() / state_org.max()) < 1e-5 and (solver.t / dt) > 200):
-        if ((res.max() < 1e-3 and (solver.t / dt) > 50)) or (gas['H2'].X < 0.005 or gas['H2'].X > 0.995):
-            # if res.max() < 1e-5:
-            print(res.max(), "Y_H2=", gas['H2'].Y)
-            break
+            # state_new = np.hstack([gas[gas.species_names].Y])
+            state_res = state_new - state_org
+            res = abs(state_res[state_org != 0] / state_org[state_org != 0])
+            # res[res==np.inf]=0
+            # res = np.nan_to_num(res)
+            # res=res[res!=0]
+            # print(res.max())
+
+            # Update the sample
+            train_org.append(state_org)
+            train_new.append(state_new)
+
+            # if (abs(state_res.max() / state_org.max()) < 1e-5 and (solver.t / dt) > 200):
+            if ((res[:-3].mean() < 1e-3 and (solver.t / dt) > 50)) or (gas['H2'].X < 0.005 or gas['H2'].X > 0.995):
+                # if res.max() < 1e-5:
+                print(res.max(), "Y_H2=", gas['H2'].Y)
+                break
 
     return train_org, train_new
 

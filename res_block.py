@@ -6,8 +6,8 @@ K.set_floatx('float32')
 
 
 def res_block(input_tensor, n_neuron, stage, block, d1=0.1, bn=False):
-    conv_name_base = 'res' + str(stage) + block + '_branch'
-    bn_name_base = 'bn' + str(stage) + block + '_branch'
+    conv_name_base = 'res_' + str(stage) + '_' + block + '_branch'
+    bn_name_base = 'bn_' + str(stage) + '_' + block + '_branch'
 
     x = Dense(n_neuron, name=conv_name_base + '2a')(input_tensor)
     if bn:

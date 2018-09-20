@@ -14,7 +14,6 @@ os.environ['KERAS_BACKEND'] = 'tensorflow'
 
 from keras import backend as K
 
-
 K.set_floatx('float32')
 print("precision: " + K.floatx())
 # os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
@@ -33,277 +32,6 @@ import cantera as ct
 print("Running Cantera version: {}".format(ct.__version__))
 
 import pickle
-
-
-def dl_react(nns, temp, n_fuel, swt, ini):
-    # gas = ct.Solution('./data/Boivin_newTherm.cti')
-    gas = ct.Solution('./data/h2_sandiego.cti')
-    # gas = ct.Solution('./data/grimech12.cti')
-
-    fuel = 'H2'
-    gas.X = fuel + ':' + str(n_fuel) + ',O2:1,N2:4'
-    gas.TP = temp, ct.one_atm
-
-    # dl model
-    t_end = 1e-3
-    dt = 1e-6
-    t = 0
-
-    train_org = []
-    train_new = []
-    # state_org = np.hstack([gas[gas.species_names].Y, gas.T]).reshape(1, -1)
-    # state_org = np.hstack([gas[gas.species_names].X, gas.T]).reshape(1, -1)
-    # if ini.any() != None:
-    state_org = ini
-
-    while t < t_end:
-        train_org.append(state_org)
-
-        # inference
-        state_std = nns[0].inference(state_org)
-        state_log = nns[1].inference(state_org)
-
-        state_tmp = state_log
-        acc_std = nns[0].y_scaling.transform(state_tmp)
-        acc_log = nns[1].y_scaling.transform(state_tmp)
-        for i in range(acc_std.shape[1] - 1):
-            # if state_log[0, i] > swt:
-            # if acc_log[0, i] > swt and state_tmp[0, i] > 1e-4:
-            if acc_std[0, i] > 0:
-                state_tmp[0, i] = state_std[0, i]
-
-        # H mass conservation
-        # state_tmp[0, 0] = state_org[0, 0] + state_org[0, 1] + 1.0 / 17 * state_org[0, 3] \
-        #                   + 2.0 / 18 * state_org[0, 5] + 1.0 / 33 * state_org[0, 6] + 2.0 / 34 * state_org[0, 7] \
-        #                   - state_tmp[0, 1] - 1.0 / 17 * state_tmp[0, 3] \
-        #                   - 2.0 / 18 * state_tmp[0, 5] - 1.0 / 33 * state_tmp[0, 6] - 2.0 / 34 * state_tmp[0, 7]
-        # state_tmp[0, 0] = max(state_tmp[0, 0], 0)
-
-        # H mole conservation
-        if state_tmp[0, 0] > 1e-2:
-            state_tmp[0, 0] = 2 * state_org[0, 0] + 1 * state_org[0, 1] + 1 * state_org[0, 3] \
-                              + 2 * state_org[0, 5] + 1 * state_org[0, 6] + 2 * state_org[0, 7] \
-                              - 1 * state_tmp[0, 1] - 1 * state_tmp[0, 3] \
-                              - 2 * state_tmp[0, 5] - 1 * state_tmp[0, 6] - 2 * state_tmp[0, 7]
-
-            state_tmp[0, 0] = max(0.5 * state_tmp[0, 0], 0)
-
-        # O mole conservation
-        if state_tmp[0, 2] > 1e-2:
-            state_tmp[0, 2] = 2 * state_org[0, 2] + 1 * state_org[0, 3] + 1 * state_org[0, 4] \
-                              + 1 * state_org[0, 5] + 2 * state_org[0, 6] + 2 * state_org[0, 7] \
-                              - 1 * state_tmp[0, 3] - 1 * state_tmp[0, 4] \
-                              - 1 * state_tmp[0, 5] - 2 * state_tmp[0, 6] - 2 * state_tmp[0, 7]
-            state_tmp[0, 2] = max(0.5 * state_tmp[0, 2], 0)
-
-        state_new = np.hstack((state_tmp, [[dt]]))
-        # state_new = np.hstack((state_tmp[0, :-1], state_org[0, -3], state_tmp[0, -1], [dt])).reshape(1, -1)
-
-        # state_new = np.hstack((state_tmp[0, :-1], [dt])).reshape(1, -1)
-        # state_new[0,-2]=state_org[0,-2]+state_tmp[0,-1]
-        # state_new[0,:-1] = state_org[0,:-1] + state_new[0,:-1]
-
-        train_new.append(state_new)
-
-        state_res = state_new - state_org
-        res = abs(state_res[state_org != 0] / state_org[state_org != 0])
-
-        # Update the sample
-        state_org = state_new
-        t = t + dt
-        # if abs(state_res.max() / state_org.max()) < 1e-4 and (t / dt) > 100:
-        # if res.max() < 1e-5 and (t / dt) > 100:
-        #     break
-        if state_org[0, :-3].sum() > 1.5:
-            break
-
-    train_org = np.concatenate(train_org, axis=0)
-    train_org = pd.DataFrame(data=train_org, columns=nns[0].df_x_input.columns)
-    train_new = np.concatenate(train_new, axis=0)
-    train_new = pd.DataFrame(data=train_new, columns=nns[0].df_x_input.columns)
-    return train_org, train_new
-
-
-def cut_plot(x_columns, nns, n_fuel, sp, st_step, swt):
-    columns_ini = x_columns
-    # for temp in [1001, 1101, 1201]:
-    for temp in [1501]:
-        start = st_step
-
-        # ode integration
-        ode_o, ode_n = ignite_post((temp, n_fuel, 'H2'))
-        ode_o = np.asarray(ode_o)
-        ode_n = np.asarray(ode_n)
-        ode_o = ode_o[ode_o[:, -1] == 1e-6]
-        ode_n = ode_n[ode_n[:, -1] == 1e-6]
-
-        ode_o = pd.DataFrame(data=ode_o,
-                             columns=columns_ini)
-        ode_n = pd.DataFrame(data=ode_n,
-                             columns=columns_ini)
-
-        ode_o = ode_o.drop('N2', axis=1)
-        # ode_o = ode_o.drop('dT', axis=1)
-        ode_n = ode_n.drop('N2', axis=1)
-        # ode_n = ode_o + ode_n
-        ode_n = ode_n.drop('dt', axis=1)
-
-        dl_o, dl_n = dl_react(nns, temp, n_fuel, swt, ini=ode_o.values[start].reshape(1, -1))
-
-        plt.figure()
-
-        ode_show = ode_n[sp][start:].values
-        dl_show = dl_n[sp][:ode_show.size]
-
-        # plt.semilogy(ode_show, 'kd', label='ode', ms=1)
-        # plt.semilogy(dl_show, 'bd', label='dl', ms=1)
-        plt.plot(ode_show, 'kd', label='ode', ms=1)
-        plt.plot(dl_show, 'bd', label='dl', ms=1)
-        plt.legend()
-        plt.title('ini_t = ' + str(temp) + ': ' + sp)
-        plt.show()
-
-        plt.figure()
-        plt.plot(abs(dl_show - ode_show) / ode_show, 'kd', ms=1)
-        plt.show()
-
-        # plt.figure()
-        # plt.plot(abs(dl_show[ode_show != 0] - ode_show[ode_show != 0]) / ode_show[ode_show != 0], 'kd', ms=1)
-
-    # return dl_o, dl_n
-
-
-def cmp_plot(columns_ini, nns, n_fuel, sp, st_step, swt):
-    for temp in [1501]:
-        # for temp in [1001, 1101, 1201]:
-        start = st_step
-
-        # ode integration
-        ode_o, ode_n = ignite_post((temp, n_fuel, 'H2'))
-        ode_o = np.asarray(ode_o)
-        ode_n = np.asarray(ode_n)
-        ode_o = ode_o[ode_o[:, -1] == 1e-6]
-        ode_n = ode_n[ode_n[:, -1] == 1e-6]
-
-        # columns_ini = nns[0].df_x_input.columns.drop(['H_sbr_O'])
-        # columns_ini = nns[0].df_x_input.columns
-
-        ode_o = pd.DataFrame(data=ode_o,
-                             columns=columns_ini)
-        ode_n = pd.DataFrame(data=ode_n,
-                             columns=columns_ini)
-
-        # ode_o = ode_o.assign(H_sbr_O=ode_o['H'] - ode_o['O'])
-        # ode_o = ode_o.assign(H_add_O=ode_o['H'] + ode_o['O'])
-        ode_o = ode_o.drop('N2', axis=1)
-        # ode_o = ode_o.drop('dT', axis=1)
-
-        ode_n = ode_n.drop('N2', axis=1)
-        # ode_n = ode_n + ode_o
-        ode_n = ode_n.drop('dt', axis=1)
-        # ode_n = ode_n.drop('T', axis=1)
-
-        cmpr = []
-        for input_data in ode_o.values:
-
-            input_data = input_data.reshape(1, -1)
-
-            # inference
-            state_std = nns[0].inference(input_data)
-            # state_std[state_std<1e-4] = 0
-
-            state_log = nns[1].inference(input_data)
-            # state_log[state_log>=1e-4] = 0
-
-            state_new = state_log
-
-            acc_std = nns[0].x_scaling.transform(input_data)
-            acc_log = nns[1].x_scaling.transform(input_data)
-
-            # print(input_data.shape[1])
-            for i in range(state_new.shape[1]):
-                # print(i)
-                # print(state_log)
-                if acc_log[0, i] > swt:
-                    # if acc_std[0, i] > 0:
-                    # if state_new[0, i] > swt:
-                    # if acc[0, i] > swt or state_new[0,i]>1e-4:
-                    # print(acc[0,i])
-                    state_new[0, i] = state_std[0, i]
-                    # if abs((state_log[0, i] - state_std[0, i]) / state_log[0, i]) > 1e-2:
-                    #     state_new[0, i] = state_std[0, i]+state_log[0,i]
-            # H mass conservation
-            # state_new[0, 0] = input[0, 0] + input[0, 1] + 1.0 / 17 * input[0, 3] \
-            #               + 2.0 / 18 * input[0, 5] + 1.0 / 33 * input[0, 6] + 2.0 / 34 * input[0, 7] \
-            #               - state_new[0, 1] - 1.0 / 17 * state_new[0, 3] \
-            #               - 2.0 / 18 * state_new[0, 5] - 1.0 / 33 * state_new[0, 6] - 2.0 / 34 * state_new[0, 7]
-            # state_new[0, 0] = max(state_new[0, 0], 0)
-
-            # H mole conservation
-            if state_new[0, 0] > 1e-2:
-                state_new[0, 0] = 2 * input_data[0, 0] + 1 * input_data[0, 1] + 1 * input_data[0, 3] \
-                                  + 2 * input_data[0, 5] + 1 * input_data[0, 6] + 2 * input_data[0, 7] \
-                                  - 1 * state_new[0, 1] - 1 * state_new[0, 3] \
-                                  - 2 * state_new[0, 5] - 1 * state_new[0, 6] - 2 * state_new[0, 7]
-                state_new[0, 0] = max(0.5 * state_new[0, 0], 0)
-
-            # O mole conservation
-            if state_new[0, 2] > 1e-2:
-                state_new[0, 2] = 2 * input_data[0, 2] + 1 * input_data[0, 3] + 1 * input_data[0, 4] \
-                                  + 1 * input_data[0, 5] + 2 * input_data[0, 6] + 2 * input_data[0, 7] \
-                                  - 1 * state_new[0, 3] - 1 * state_new[0, 4] \
-                                  - 1 * state_new[0, 5] - 2 * state_new[0, 6] - 2 * state_new[0, 7]
-                state_new[0, 2] = max(0.5 * state_new[0, 2], 0)
-
-            # state_new[0,-1]=input_data[0,-2]+state_new[0,-1]
-            # state_new[0,:]=input_data[0,:-1]+state_new[0,:]
-            cmpr.append(state_new)
-
-        cmpr = np.concatenate(cmpr, axis=0)
-        cmpr = pd.DataFrame(data=cmpr,
-                            columns=nns[0].df_y_target.columns)
-
-        # cmpr = cmpr.rename(index=str,columns={'dT':'T'})
-        # ode_show = ode_n[sp][start:].values
-        # cmpr_show = cmpr[sp][start:].values
-
-        if sp == 'T2':
-            ode_show = ode_n['T'][start:].values
-            cmpr_show = cmpr['dT'][start:].values
-        else:
-            ode_show = ode_n[sp][start:].values
-            cmpr_show = cmpr[sp][start:].values
-
-        plt.figure()
-
-        plt.semilogy(ode_show, 'kd', label='ode', ms=1)
-        plt.semilogy(cmpr_show, 'r:', label='cmpr_s')
-        plt.legend()
-        plt.title('ini_t = ' + str(temp) + ': ' + sp)
-
-        if swt * (1 - swt) == 0:
-            # a = nns[swt].y_scaling.transform(cmpr)
-            a = nns[swt].x_scaling.transform(ode_o)
-            a = pd.DataFrame(data=a,
-                             columns=nns[swt].df_x_input.columns)
-            plt.figure()
-            plt.plot(a[sp][start:].values)
-            plt.show()
-
-        plt.figure()
-        plt.plot(abs(cmpr_show - ode_show) / ode_show, 'kd', ms=1)
-        plt.show()
-        # plt.figure()
-        # plt.plot(abs(np.log(cmpr_show) - np.log(ode_show)) / np.log(ode_show), 'kd', ms=1)
-
-        plt.figure()
-        plt.plot(ode_show, 'kd', label='ode', ms=1)
-        plt.plot(cmpr_show, 'rd', label='cmpr_s', ms=1)
-        plt.legend()
-        plt.title('ini_t = ' + str(temp) + ': ' + sp)
-        plt.show()
-
-    return cmpr, ode_o, ode_n
 
 
 class classScaler(object):
@@ -368,24 +96,6 @@ class combustionML(object):
         self.vsplit = None
         self.predict = None
 
-
-    def composeResnetModel(self, n_neurons=200, blocks=2, drop1=0.1, loss='mse', optimizer='adam', batch_norm=False):
-        print('set up ANN :', self.inputs.dtype)
-        # a layer instance is callable on a tensor, and returns a tensor
-        x = Dense(n_neurons, name='1_base')(self.inputs)
-        # x = BatchNormalization(axis=-1, name='1_base_bn')(x)
-        x = Activation('relu')(x)
-
-        for b in range(blocks):
-            x = res_block(x, n_neurons, stage=1, block=str(b), d1=drop1, bn=batch_norm)
-
-        predictions = Dense(self.dim_label, activation='linear')(x)
-
-        self.model = Model(inputs=self.inputs, outputs=predictions)
-        # self.model = model
-        self.model.compile(loss=loss, optimizer=optimizer, metrics=['accuracy'])
-
-
     def res_reg_model(self, model_input, id, n_neurons=200, blocks=2, drop1=0.1, batch_norm=False):
         print('set up ANN :', model_input.dtype)
         x = Dense(n_neurons, name='1_base' + id)(model_input)
@@ -395,10 +105,18 @@ class combustionML(object):
         for b in range(blocks):
             x = res_block(x, n_neurons, stage=1, block=str(b) + id, d1=drop1, bn=batch_norm)
 
+        # # second block
+        # b2_neurons = int(n_neurons/8)
+        # x = Dense(b2_neurons, name='2_base' + id)(x)
+        # # x = BatchNormalization(axis=-1, name='1_base_bn')(x)
+        # x = Activation('relu')(x)
+        #
+        # for b in range(blocks):
+        #     x = res_block(x, b2_neurons, stage=2, block=str(b) + id, d1=drop1, bn=batch_norm)
+
         predictions = Dense(self.dim_label, activation='linear')(x)
 
         model = Model(inputs=model_input, outputs=predictions)
-
         return model
 
     def fitModel(self, batch_size=1024, epochs=200, vsplit=0.1, sfl=True, ensemble_num=4):
@@ -429,42 +147,25 @@ class combustionML(object):
             name = fl.split('_')
             names.append(float(name[1]))
         names.sort()
-        self.ensemble_num = min(ensemble_num,len(names))
+        self.ensemble_num = min(ensemble_num, len(names))
         for i in range(self.ensemble_num):
             a = name[0] + '_' + format(names[i], '.4f') + '_' + name[2]
             print(a)
             os.rename('./tmp/history/' + a, './tmp/weights_' + str(i) + '.hdf5')
 
     def prediction(self):
-        # self.model.save_weights("./tmp/weights.last.hdf5")
         self.model.load_weights("./tmp/weights_0.hdf5")
 
         predict = self.model.predict(self.x_test.values)
         predict = self.y_scaling.inverse_transform(predict)
         self.predict = pd.DataFrame(data=predict, columns=self.df_y_target.columns)
 
-        R2_score = -abs(metrics.r2_score(predict, self.y_test))
+        R2_score = abs(metrics.r2_score(predict, self.y_test))
         print(R2_score)
         return R2_score
 
-    def ensemble(self,n_neurons=200, blocks=2, drop1=.0):
+    def ensemble(self, n_neurons=200, blocks=2, drop1=.0):
         model_last = self.res_reg_model(self.inputs, '_last_', n_neurons=n_neurons, blocks=blocks, drop1=drop1)
-        # model_last = clone_model(self.model, input_tensors=self.inputs)
-        # model_input = self.inputs
-        # model_input.name = 'last'
-        for layer in model_last.layers:
-            print(layer.name)
-        print('self.model')
-        for layer in self.model.layers:
-            print(layer.name)
-        a = clone_model(self.model)
-        print('clone')
-        for layer in a.layers:
-            print(layer.name)
-
-
-        # model_last = clone_model(self.model, Input(shape=(self.dim_input,), dtype=self.floatx))
-        # model_last.layers[1].name = 'last'
         model_last.load_weights("./tmp/weights.last.hdf5")
 
         models = []
@@ -472,16 +173,13 @@ class combustionML(object):
 
         for i in range(self.ensemble_num):
             model = self.res_reg_model(self.inputs, str(i), n_neurons=n_neurons, blocks=blocks, drop1=drop1)
-            # model = clone_model(self.model,input_tensors=self.inputs)
-            model.load_weights("./tmp/weights_"+str(i)+".hdf5")
+            model.load_weights("./tmp/weights_" + str(i) + ".hdf5")
             models.append(model)
 
         outputs = [model.outputs[0] for model in models]
         y = Average()(outputs)
 
         self.model_ensemble = Model(inputs=self.inputs, outputs=y, name='ensemble')
-        for layer in self.model_ensemble.layers:
-            print(layer.name)
         self.model.load_weights("./tmp/weights_0.hdf5")
 
     def inference(self, x):
@@ -494,7 +192,7 @@ class combustionML(object):
 
         return out
 
-    def inference_ensemble(self, x,batch_size=1204):
+    def inference_ensemble(self, x, batch_size=1204):
         tmp = self.x_scaling.transform(x)
         predict = self.model_ensemble.predict(tmp, batch_size=batch_size)
         # inverse for out put
@@ -548,9 +246,7 @@ class combustionML(object):
         adam = optimizers.Adam(lr=0.001, beta_1=0.9, beta_2=0.999,
                                epsilon=1e-8, decay=0.0, amsgrad=True)
 
-        # self.composeResnetModel(n_neurons=hyper[0], blocks=hyper[1], drop1=hyper[2],
-        #                         optimizer=adam, loss='mae', batch_norm=False)
-        self.model = self.res_reg_model(self.inputs,'_base_',n_neurons=hyper[0],
+        self.model = self.res_reg_model(self.inputs, '_base_', n_neurons=hyper[0],
                                         blocks=hyper[1], drop1=hyper[2], batch_norm=False)
 
         self.model.compile(loss='mae', optimizer=adam, metrics=['accuracy'])
@@ -558,10 +254,9 @@ class combustionML(object):
         self.fitModel(epochs=hyper[3], batch_size=1024 * 8, vsplit=0.2,
                       sfl=False, ensemble_num=self.ensemble_num)
 
-
         self.ensemble(n_neurons=hyper[0], blocks=hyper[1], drop1=hyper[2])
-        r2 = self.prediction()
 
+        r2 = self.prediction()
         return r2
 
 
@@ -655,9 +350,9 @@ if __name__ == "__main__":
     #
     # cmpr, ode_o, ode_n = cmp_plot(x_columns, nns, 2, 'H', 0, 0.9)
     # cmpr, ode_o, ode_n = cmp_plot(x_columns, nns, 50, 'OH', 0, 1)
-    cmp_plot(x_columns, nns, 20, 'O', 0, 0)
-    cmp_plot(x_columns, nns, 10, 'O', 10, 1)
-    cmp_plot(x_columns, nns, 100, 'O', 10, 0)
+    # cmp_plot(x_columns, nns, 20, 'O', 0, 0)
+    # cmp_plot(x_columns, nns, 10, 'O', 10, 1)
+    # cmp_plot(x_columns, nns, 100, 'O', 10, 0)
     #
     # # c = abs(b_n[b_o != 0] - b_o[b_o != 0]) / b_o[b_o != 0]
 
