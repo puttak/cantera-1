@@ -1,13 +1,10 @@
+import os
+
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-from string import ascii_lowercase
-
 from sklearn import model_selection, metrics
-from sklearn.preprocessing import normalize, MinMaxScaler, StandardScaler
-from sklearn.cluster import KMeans
-
-import os
+from sklearn.preprocessing import MinMaxScaler, StandardScaler
 
 os.environ['KERAS_BACKEND'] = 'tensorflow'
 # os.environ['KERAS_BACKEND'] = 'cntk'
@@ -18,20 +15,17 @@ K.set_floatx('float32')
 print("precision: " + K.floatx())
 # os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
-from keras.models import Model, clone_model
-from keras.layers import Dense, Input, BatchNormalization, Activation, Dropout, Average
+from keras.models import Model
+from keras.layers import Dense, Input, Activation, Average
 from keras.callbacks import ModelCheckpoint
 from keras import optimizers
 
-from res_block import res_block
-from reactor_ode_delta import data_gen_f, ignite_post
-from dataScaling import dataScaling
-from flameMasterTest import fm_data_gen
+from src.res_block import res_block
+from src.reactor_ode_delta import data_gen_f
+from src.dataScaling import dataScaling
 import cantera as ct
 
 print("Running Cantera version: {}".format(ct.__version__))
-
-import pickle
 
 
 class classScaler(object):

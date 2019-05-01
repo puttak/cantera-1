@@ -1,15 +1,16 @@
 # %%
+import pickle
+
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-import pickle
-from reactor_ode_delta import ignite_post, data_gen_f
-from dataScaling import LogScaler, AtanScaler, NoScaler
 import xgboost as xgb
+from sklearn.metrics import r2_score
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler, StandardScaler, MaxAbsScaler
-from sklearn.decomposition import PCA
-from sklearn.metrics import r2_score
+
+from src.dataScaling import LogScaler, AtanScaler, NoScaler
+from src.reactor_ode_delta import ignite_post, data_gen_f
 
 
 # create data
@@ -21,7 +22,7 @@ def create_data():
     n_l = np.linspace(0, 30, 30)
 
     n = np.unique(np.concatenate((n_s, n_l)))[1:]
-    n=n[n>0.4]
+    n = n[n > 0.4]
     XX, YY = np.meshgrid(T, n)
     ini = np.concatenate((XX.reshape(-1, 1), YY.reshape(-1, 1)), axis=1)
 
@@ -67,7 +68,6 @@ def qt_analysis(res):
 
 
 def xgb_model_train(df_x, res, mask, species):
-
     scaler_dict = {'log': LogScaler(),
                    'no': NoScaler(),
                    'mmx': MinMaxScaler(),

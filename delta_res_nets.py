@@ -1,14 +1,13 @@
 import glob
 import os
-import pickle
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
 from boost_test import test_data
-from dataScaling import dataScaling
-from deltaNets import combustionML
+from src.dataScaling import dataScaling
+from src.deltaNets import combustionML
 
 
 def clear_hist():
@@ -29,12 +28,16 @@ if __name__ == '__main__':
 
     # load training
     # df_x, df_y = pickle.load(open('data/x_y_org.p', 'rb'))
-    df_x, df_y = pickle.load(open('data/x_y_org_pca_reduced.p', 'rb'))
-
+    # df_x, df_y = pickle.load(open('data/x_y_org_pca_reduced.p', 'rb'))
     # df_x, df_y = pickle.load(open('data/x_y_org_new.p', 'rb'))
-    df_x_new, df_y_new = pickle.load(open('data/x_y_org_new.p', 'rb'))
-    df_x = df_x.append(df_x_new, ignore_index=True)
-    df_y = df_y.append(df_y_new, ignore_index=True)
+
+    df = pd.read_hdf('./data/merged.h5')
+    df_x = df[0:int(df.shape[0] / 2)]
+    df_y = df[int(df.shape[0] / 2):]
+
+    # df_x_new, df_y_new = pickle.load(open('data/x_y_org_new.p', 'rb'))
+    # df_x = df_x.append(df_x_new, ignore_index=True)
+    # df_y = df_y.append(df_y_new, ignore_index=True)
 
     # initial conditions
     n_H2 = sorted(list(map(float, set(df_x['f']))))
