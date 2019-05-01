@@ -1,0 +1,566 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="BookmarkManager">
+    <bookmark url="file://$PROJECT_DIR$/dataScaling.py" description="if self.switcher.get(self.case) == 'log':" line="109" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="384de4c1-9fce-46e4-863f-0f8d474c1fea" name="Default" comment="correct accumulation code">
+      <change afterPath="$PROJECT_DIR$/src/dataGen.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/H2 inginition ANN mapping.ipynb" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/KL.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/bop.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/cefrac_test.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/dataScaling.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/data_scaling.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/deltaNets.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/delta_res_nets.py" beforeDir="false" afterPath="$PROJECT_DIR$/delta_res_nets.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/flameMasterTest.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/reactor_ode.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/reactor_ode_delta.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/res_block.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/results/r2_log.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/results/r2_std.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/results/std_log_H2_0.95.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/results/std_log_H2_0.95_err.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/results/std_log_H2_0.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/results/std_log_H2_0_err.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/results/std_log_H2_1.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/results/std_log_H2_1501_5_0.95.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/results/std_log_H2_1_err.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/results/tan_log_H2_1501_5_0.95.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_gen.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/xgboost_ode.ipynb" beforeDir="false" />
+    </list>
+    <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="CoverageDataManager">
+    <SUITE FILE_PATH="coverage/cantera$boost_test.coverage" NAME="boost_test Coverage Results" MODIFIED="1529593295627" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/cantera$deltaNets.coverage" NAME="deltaNets Coverage Results" MODIFIED="1531923545476" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/cantera$cefrac_test.coverage" NAME="cefrac_test Coverage Results" MODIFIED="1531320721370" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/cantera$reactor_ode_delta.coverage" NAME="reactor_ode_delta Coverage Results" MODIFIED="1533740885648" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/cantera$delta_res_nets.coverage" NAME="delta_res_nets Coverage Results" MODIFIED="1530548892848" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/cantera$clustering.coverage" NAME="clustering Coverage Results" MODIFIED="1536584505576" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/cantera$test_gen.coverage" NAME="test_gen Coverage Results" MODIFIED="1534865132450" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/cantera$py_test_in_boost_test_py.coverage" NAME="py.test in boost_test.py Coverage Results" MODIFIED="1530282228759" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+  </component>
+  <component name="DatabaseView">
+    <option name="SHOW_INTERMEDIATE" value="true" />
+    <option name="GROUP_DATA_SOURCES" value="true" />
+    <option name="GROUP_SCHEMA" value="true" />
+    <option name="GROUP_CONTENTS" value="false" />
+    <option name="SORT_POSITIONED" value="false" />
+    <option name="SHOW_EMPTY_GROUPS" value="false" />
+    <option name="AUTO_SCROLL_FROM_SOURCE" value="false" />
+    <option name="HIDDEN_KINDS">
+      <set />
+    </option>
+    <expand />
+    <select />
+  </component>
+  <component name="FavoritesManager">
+    <favorites_list name="cantera" />
+  </component>
+  <component name="FileEditorManager">
+    <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/delta_res_nets.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="525">
+              <caret line="35" column="51" selection-start-line="35" selection-start-column="51" selection-end-line="35" selection-end-column="51" />
+              <folding>
+                <element signature="e#0#11#0" expanded="true" />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/src/dataGen.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="294">
+              <caret line="128" column="25" selection-start-line="128" selection-start-column="25" selection-end-line="128" selection-end-column="25" />
+              <folding>
+                <element signature="e#0#19#0" expanded="true" />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+    </leaf>
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Python Script" />
+      </list>
+    </option>
+  </component>
+  <component name="FindInProjectRecents">
+    <findStrings>
+      <find>dt_ini</find>
+      <find>ignite</find>
+      <find>scaling_case</find>
+      <find>asc</find>
+      <find>1e-20</find>
+      <find>load</find>
+      <find>adam</find>
+      <find>F</find>
+      <find>df_y</find>
+      <find>df_x</find>
+    </findStrings>
+    <replaceStrings>
+      <replace>df</replace>
+      <replace>input</replace>
+      <replace>self.bias</replace>
+      <replace>df_y_ky</replace>
+      <replace>df_y_k</replace>
+      <replace>df_x_k</replace>
+    </replaceStrings>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="IdeDocumentHistory">
+    <option name="CHANGED_PATHS">
+      <list>
+        <option value="$PROJECT_DIR$/cefrac_test.py" />
+        <option value="$PROJECT_DIR$/reactor_ode_test.py" />
+        <option value="$PROJECT_DIR$/boost_test.py" />
+        <option value="$PROJECT_DIR$/res_block.py" />
+        <option value="$PROJECT_DIR$/dataScaling.py" />
+        <option value="$PROJECT_DIR$/clustering.py" />
+        <option value="$PROJECT_DIR$/test_gen.py" />
+        <option value="$PROJECT_DIR$/deltaNets.py" />
+        <option value="$PROJECT_DIR$/delta_res_nets.py" />
+        <option value="$PROJECT_DIR$/dataGen.py" />
+        <option value="$PROJECT_DIR$/reactor_ode_delta.py" />
+        <option value="$PROJECT_DIR$/src/dataGen.py" />
+      </list>
+    </option>
+  </component>
+  <component name="ProjectFrameBounds" extendedState="6">
+    <option name="x" value="1920" />
+    <option name="width" value="1920" />
+    <option name="height" value="1080" />
+  </component>
+  <component name="ProjectView">
+    <navigator proportions="" version="1">
+      <foldersAlwaysOnTop value="true" />
+    </navigator>
+    <panes />
+  </component>
+  <component name="PropertiesComponent">
+    <property name="SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
+    <property name="WebServerToolWindowFactoryState" value="false" />
+    <property name="com.intellij.ide.scratch.LRUPopupBuilder$1/New Scratch File" value="Python" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/../combustionML" />
+    <property name="node.js.detected.package.eslint" value="true" />
+    <property name="node.js.path.for.package.eslint" value="project" />
+    <property name="node.js.selected.package.eslint" value="(autodetect)" />
+    <property name="settings.editor.selected.configurable" value="com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable" />
+  </component>
+  <component name="RunDashboard">
+    <option name="ruleStates">
+      <list>
+        <RuleState>
+          <option name="name" value="ConfigurationTypeDashboardGroupingRule" />
+        </RuleState>
+        <RuleState>
+          <option name="name" value="StatusDashboardGroupingRule" />
+        </RuleState>
+      </list>
+    </option>
+  </component>
+  <component name="RunManager" selected="Python.dataGen">
+    <configuration name="dataGen" type="PythonConfigurationType" factoryName="Python" temporary="true">
+      <module name="cantera" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/src" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/src/dataGen.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="true" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="deltaNets" type="PythonConfigurationType" factoryName="Python" temporary="true">
+      <module name="cantera" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/deltaNets.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="delta_res_nets" type="PythonConfigurationType" factoryName="Python" temporary="true">
+      <module name="cantera" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/delta_res_nets.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="true" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="reactor_ode_delta" type="PythonConfigurationType" factoryName="Python" temporary="true">
+      <module name="cantera" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/reactor_ode_delta.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="true" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <list>
+      <item itemvalue="Python.reactor_ode_delta" />
+      <item itemvalue="Python.delta_res_nets" />
+      <item itemvalue="Python.deltaNets" />
+      <item itemvalue="Python.dataGen" />
+    </list>
+    <recent_temporary>
+      <list>
+        <item itemvalue="Python.dataGen" />
+        <item itemvalue="Python.dataGen" />
+        <item itemvalue="Python.reactor_ode_delta" />
+        <item itemvalue="Python.delta_res_nets" />
+        <item itemvalue="Python.deltaNets" />
+      </list>
+    </recent_temporary>
+  </component>
+  <component name="SvnConfiguration">
+    <configuration />
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="384de4c1-9fce-46e4-863f-0f8d474c1fea" name="Default" comment="" />
+      <created>1529589817084</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1529589817084</updated>
+      <workItem from="1543329155757" duration="599000" />
+      <workItem from="1556206878131" duration="7650000" />
+      <workItem from="1556719154925" duration="387000" />
+      <workItem from="1556719559293" duration="327000" />
+    </task>
+    <task id="LOCAL-00001" summary="second chance">
+      <created>1529589908427</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1529589908427</updated>
+    </task>
+    <task id="LOCAL-00002" summary="xgboost notebook">
+      <created>1529589969170</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1529589969170</updated>
+    </task>
+    <task id="LOCAL-00003" summary="clean up">
+      <created>1530285662348</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1530285662348</updated>
+    </task>
+    <task id="LOCAL-00004" summary="clean up">
+      <created>1531313613786</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1531313613786</updated>
+    </task>
+    <task id="LOCAL-00005" summary="add log_std scaling">
+      <created>1531497211505</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1531497211505</updated>
+    </task>
+    <task id="LOCAL-00006" summary="remove n H2 = 0 from the training data">
+      <created>1531528122423</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1531528122423</updated>
+    </task>
+    <task id="LOCAL-00007" summary="add ensemble model">
+      <created>1531839078864</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1531839078864</updated>
+    </task>
+    <task id="LOCAL-00008" summary="clean up">
+      <created>1531848337072</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1531848337072</updated>
+    </task>
+    <task id="LOCAL-00009" summary="randomize time and optimize inference batch_size">
+      <created>1531952734859</created>
+      <option name="number" value="00009" />
+      <option name="presentableId" value="LOCAL-00009" />
+      <option name="project" value="LOCAL" />
+      <updated>1531952734859</updated>
+    </task>
+    <task id="LOCAL-00010" summary="good">
+      <created>1532354231209</created>
+      <option name="number" value="00010" />
+      <option name="presentableId" value="LOCAL-00010" />
+      <option name="project" value="LOCAL" />
+      <updated>1532354231209</updated>
+    </task>
+    <task id="LOCAL-00011" summary="add one step data generation">
+      <created>1534869411635</created>
+      <option name="number" value="00011" />
+      <option name="presentableId" value="LOCAL-00011" />
+      <option name="project" value="LOCAL" />
+      <updated>1534869411635</updated>
+    </task>
+    <task id="LOCAL-00012" summary="update composeModel">
+      <created>1536151325630</created>
+      <option name="number" value="00012" />
+      <option name="presentableId" value="LOCAL-00012" />
+      <option name="project" value="LOCAL" />
+      <updated>1536151325630</updated>
+    </task>
+    <task id="LOCAL-00013" summary="correct accumulation code">
+      <created>1537455509849</created>
+      <option name="number" value="00013" />
+      <option name="presentableId" value="LOCAL-00013" />
+      <option name="project" value="LOCAL" />
+      <updated>1537455509849</updated>
+    </task>
+    <option name="localTasksCounter" value="14" />
+    <servers />
+  </component>
+  <component name="TestHistory">
+    <history-entry file="py_test_in_boost_test_py - 2018.06.21 at 16h 58m 10s.xml">
+      <configuration name="py.test in boost_test.py" configurationId="tests" />
+    </history-entry>
+    <history-entry file="py_test_in_boost_test_py - 2018.06.21 at 16h 58m 15s.xml">
+      <configuration name="py.test in boost_test.py" configurationId="tests" />
+    </history-entry>
+    <history-entry file="py_test_in_boost_test_py - 2018.06.21 at 16h 59m 08s.xml">
+      <configuration name="py.test in boost_test.py" configurationId="tests" />
+    </history-entry>
+    <history-entry file="py_test_in_boost_test_py - 2018.06.27 at 11h 15m 28s.xml">
+      <configuration name="py.test in boost_test.py" configurationId="tests" />
+    </history-entry>
+    <history-entry file="py_test_in_boost_test_py - 2018.06.29 at 16h 23m 50s.xml">
+      <configuration name="py.test in boost_test.py" configurationId="tests" />
+    </history-entry>
+  </component>
+  <component name="TimeTrackingManager">
+    <option name="totallyTimeSpent" value="8963000" />
+  </component>
+  <component name="TodoView">
+    <todo-panel id="selected-file">
+      <is-autoscroll-to-source value="true" />
+    </todo-panel>
+    <todo-panel id="all">
+      <are-packages-shown value="true" />
+      <is-autoscroll-to-source value="true" />
+    </todo-panel>
+  </component>
+  <component name="ToolWindowManager">
+    <frame x="1920" y="0" width="1920" height="1080" extended-state="6" />
+    <layout>
+      <window_info content_ui="combo" id="Project" order="0" sideWeight="0.4982639" weight="0.39423078" />
+      <window_info id="Structure" order="1" sideWeight="0.5017361" side_tool="true" weight="0.15064102" />
+      <window_info id="Favorites" order="2" side_tool="true" weight="0.32959402" />
+      <window_info anchor="bottom" id="Message" order="0" />
+      <window_info anchor="bottom" id="Find" order="1" weight="0.32711306" />
+      <window_info anchor="bottom" id="Run" order="2" sideWeight="0.49893162" weight="0.3898488" />
+      <window_info anchor="bottom" id="Debug" order="3" weight="0.39954597" />
+      <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
+      <window_info anchor="bottom" id="Inspection" order="5" weight="0.4" />
+      <window_info anchor="bottom" id="TODO" order="6" weight="0.32711306" />
+      <window_info anchor="bottom" id="Docker" order="7" show_stripe_button="false" />
+      <window_info anchor="bottom" id="Database Changes" order="8" show_stripe_button="false" />
+      <window_info anchor="bottom" id="Terminal" order="9" weight="0.32821077" />
+      <window_info anchor="bottom" id="Event Log" order="10" sideWeight="0.5037393" side_tool="true" weight="0.5356751" />
+      <window_info anchor="bottom" id="Version Control" order="11" weight="0.32601535" />
+      <window_info active="true" anchor="bottom" id="Python Console" order="12" sideWeight="0.49626067" visible="true" weight="0.325054" />
+      <window_info anchor="right" id="Commander" order="0" weight="0.4" />
+      <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
+      <window_info anchor="right" content_ui="combo" id="Hierarchy" order="2" weight="0.25" />
+      <window_info anchor="right" id="Database" order="3" weight="0.32905984" />
+      <window_info anchor="right" id="SciView" order="4" sideWeight="0.44618055" visible="true" weight="0.49626067" />
+      <window_info anchor="right" x="0" y="0" width="430" height="820" id="Documentation" order="5" sideWeight="0.5538194" side_tool="true" weight="0.3974359" />
+    </layout>
+    <layout-to-restore>
+      <window_info content_ui="combo" id="Project" order="0" sideWeight="0.4982639" weight="0.39423078" />
+      <window_info id="Structure" order="1" sideWeight="0.5017361" side_tool="true" weight="0.15064102" />
+      <window_info id="Favorites" order="2" side_tool="true" weight="0.32959402" />
+      <window_info anchor="bottom" id="Message" order="0" />
+      <window_info anchor="bottom" id="Find" order="1" weight="0.3280363" />
+      <window_info anchor="bottom" id="Run" order="2" sideWeight="0.49893162" weight="0.39160046" />
+      <window_info anchor="bottom" id="Debug" order="3" weight="0.4" />
+      <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
+      <window_info anchor="bottom" id="Inspection" order="5" weight="0.4" />
+      <window_info anchor="bottom" id="TODO" order="6" weight="0.3280363" />
+      <window_info anchor="bottom" id="Docker" order="7" show_stripe_button="false" />
+      <window_info anchor="bottom" id="Database Changes" order="8" show_stripe_button="false" />
+      <window_info anchor="bottom" id="Terminal" order="9" weight="0.3291714" />
+      <window_info anchor="bottom" id="Event Log" order="10" sideWeight="0.50106835" side_tool="true" weight="0.32118452" />
+      <window_info anchor="bottom" id="Version Control" order="11" weight="0.3280363" />
+      <window_info anchor="bottom" id="Python Console" order="12" weight="0.34619752" />
+      <window_info anchor="right" id="Commander" order="0" weight="0.4" />
+      <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
+      <window_info anchor="right" content_ui="combo" id="Hierarchy" order="2" weight="0.25" />
+      <window_info anchor="right" id="Database" order="3" weight="0.32905984" />
+      <window_info anchor="right" id="SciView" order="4" sideWeight="0.4568528" visible="true" weight="0.3974359" />
+      <window_info anchor="right" x="0" y="0" width="430" height="820" id="Documentation" order="5" sideWeight="0.5431472" side_tool="true" weight="0.3974359" />
+    </layout-to-restore>
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="1" />
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="second chance" />
+    <MESSAGE value="xgboost notebook" />
+    <MESSAGE value="add log_std scaling" />
+    <MESSAGE value="remove n H2 = 0 from the training data" />
+    <MESSAGE value="add ensemble model" />
+    <MESSAGE value="clean up" />
+    <MESSAGE value="randomize time and optimize inference batch_size" />
+    <MESSAGE value="good" />
+    <MESSAGE value="add one step data generation" />
+    <MESSAGE value="update composeModel" />
+    <MESSAGE value="correct accumulation code" />
+    <option name="LAST_COMMIT_MESSAGE" value="correct accumulation code" />
+  </component>
+  <component name="com.intellij.coverage.CoverageDataManagerImpl">
+    <SUITE FILE_PATH="coverage/cantera$deltaNets.coverage" NAME="deltaNets Coverage Results" MODIFIED="1556208512962" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/cantera$dataGen__1_.coverage" NAME="dataGen (1) Coverage Results" MODIFIED="1556719470596" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/src" />
+    <SUITE FILE_PATH="coverage/cantera$dataGen.coverage" NAME="dataGen Coverage Results" MODIFIED="1556719637598" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/src" />
+    <SUITE FILE_PATH="coverage/cantera$reactor_ode_delta.coverage" NAME="reactor_ode_delta Coverage Results" MODIFIED="1556210894722" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+  </component>
+  <component name="editorHistoryManager">
+    <entry file="file://$PROJECT_DIR$/trainRes.py" />
+    <entry file="file://$PROJECT_DIR$/simple.py" />
+    <entry file="file://$PROJECT_DIR$/data/x_y_org.p" />
+    <entry file="file://$PROJECT_DIR$/cefrac_test.py" />
+    <entry file="file://$APPLICATION_HOME_DIR$/helpers/pydev/_pydev_bundle/pydev_import_hook.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="168">
+          <caret line="18" selection-start-line="18" selection-end-line="18" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/reactor_ode_test.py" />
+    <entry file="file://$PROJECT_DIR$/reactor_ode_p.py" />
+    <entry file="file://$PROJECT_DIR$/mixNets.py" />
+    <entry file="file://$USER_HOME$/anaconda3/envs/my_dev/lib/python3.6/site-packages/numpy/core/shape_base.py" />
+    <entry file="file://$PROJECT_DIR$/flameMasterTest.py" />
+    <entry file="file://$PROJECT_DIR$/res_block.py" />
+    <entry file="file://$APPLICATION_CONFIG_DIR$/scratches/scratch_2.py" />
+    <entry file="file://$PROJECT_DIR$/clustering.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="2196">
+          <caret line="133" column="4" selection-start-line="133" selection-start-column="4" selection-end-line="133" selection-end-column="4" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/test_gen.py" />
+    <entry file="file://$PROJECT_DIR$/dataScaling.py" />
+    <entry file="file://$PROJECT_DIR$/data/h2_sandiego.cti">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="366">
+          <caret line="218" column="45" lean-forward="true" selection-start-line="218" selection-start-column="45" selection-end-line="218" selection-end-column="45" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/dataGen.py" />
+    <entry file="file://$PROJECT_DIR$/deltaNets.py" />
+    <entry file="file://$PROJECT_DIR$/reactor_ode_delta.py" />
+    <entry file="file://$PROJECT_DIR$/boost_test.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="21">
+          <caret line="1" selection-start-line="1" selection-end-line="11" selection-end-column="36" />
+          <folding>
+            <element signature="e#5#23#0" expanded="true" />
+            <element signature="e#1002#1676#0" />
+            <element signature="e#1705#2013#0" />
+            <element signature="e#2068#4188#0" />
+            <element signature="e#4214#4540#0" />
+            <element signature="e#4614#6244#0" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/delta_res_nets.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="525">
+          <caret line="35" column="51" selection-start-line="35" selection-start-column="51" selection-end-line="35" selection-end-column="51" />
+          <folding>
+            <element signature="e#0#11#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/dataGen.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="294">
+          <caret line="128" column="25" selection-start-line="128" selection-start-column="25" selection-end-line="128" selection-end-column="25" />
+          <folding>
+            <element signature="e#0#19#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+  </component>
+</project>
